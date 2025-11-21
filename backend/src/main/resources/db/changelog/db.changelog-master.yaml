@@ -1,0 +1,168 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: codex
+      changes:
+        - createTable:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: email
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: password_hash
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: "CURRENT_TIMESTAMP"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: jira_api_token
+                  type: VARCHAR(255)
+              - column:
+                  name: jira_api_email
+                  type: VARCHAR(255)
+
+  - changeSet:
+      id: 2
+      author: codex
+      changes:
+        - createTable:
+            tableName: team_members
+            columns:
+              - column: {name: id, type: BIGSERIAL, constraints: {primaryKey: true}}
+              - column: {name: name, type: VARCHAR(255), constraints: {nullable: false}}
+              - column: {name: role, type: VARCHAR(255)}
+              - column: {name: weekly_load, type: INT}
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_team_member_user
+                    references: users(id)
+
+  - changeSet:
+      id: 3
+      author: codex
+      changes:
+        - createTable:
+            tableName: domain_cycles
+            columns:
+              - column: {name: id, type: BIGSERIAL, constraints: {primaryKey: true}}
+              - column: {name: name, type: VARCHAR(255), constraints: {nullable: false}}
+              - column: {name: start_date, type: DATE, constraints: {nullable: false}}
+              - column: {name: end_date, type: DATE, constraints: {nullable: false}}
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_domain_cycle_user
+                    references: users(id)
+
+  - changeSet:
+      id: 4
+      author: codex
+      changes:
+        - createTable:
+            tableName: sprints
+            columns:
+              - column: {name: id, type: BIGSERIAL, constraints: {primaryKey: true}}
+              - column: {name: name, type: VARCHAR(255), constraints: {nullable: false}}
+              - column: {name: start_date, type: DATE, constraints: {nullable: false}}
+              - column: {name: end_date, type: DATE, constraints: {nullable: false}}
+              - column: {name: capacity, type: INT}
+              - column: {name: sp_completed, type: INT}
+              - column:
+                  name: domain_cycle_id
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_sprint_domain_cycle
+                    references: domain_cycles(id)
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_sprint_user
+                    references: users(id)
+
+  - changeSet:
+      id: 5
+      author: codex
+      changes:
+        - createTable:
+            tableName: holidays
+            columns:
+              - column: {name: id, type: BIGSERIAL, constraints: {primaryKey: true}}
+              - column: {name: description, type: VARCHAR(255), constraints: {nullable: false}}
+              - column: {name: holiday_date, type: DATE, constraints: {nullable: false}}
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_holiday_user
+                    references: users(id)
+
+  - changeSet:
+      id: 6
+      author: codex
+      changes:
+        - createTable:
+            tableName: epics
+            columns:
+              - column: {name: id, type: BIGSERIAL, constraints: {primaryKey: true}}
+              - column: {name: epic_key, type: VARCHAR(255), constraints: {nullable: false}}
+              - column: {name: name, type: VARCHAR(255), constraints: {nullable: false}}
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_epic_user
+                    references: users(id)
+
+  - changeSet:
+      id: 7
+      author: codex
+      changes:
+        - createTable:
+            tableName: unplanned_items
+            columns:
+              - column: {name: id, type: BIGSERIAL, constraints: {primaryKey: true}}
+              - column: {name: title, type: VARCHAR(255), constraints: {nullable: false}}
+              - column: {name: story_points, type: INT}
+              - column:
+                  name: sprint_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_unplanned_sprint
+                    references: sprints(id)
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_unplanned_user
+                    references: users(id)
+

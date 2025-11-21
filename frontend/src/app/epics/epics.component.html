@@ -1,0 +1,15 @@
+<div class="card">
+  <h2>Épicos (Jira)</h2>
+  <form [formGroup]="form" (ngSubmit)="load()" class="row">
+    <mat-form-field appearance="outline">
+      <mat-label>Epic key (ex: PROJ-1)</mat-label>
+      <input matInput formControlName="epicKey" />
+    </mat-form-field>
+    <button mat-raised-button color="primary" type="submit">Buscar</button>
+  </form>
+
+  <div *ngIf="progress">
+    <p>Progresso: {{ progress.completedIssues }}/{{ progress.totalIssues }} ({{ progress.progressPercentage }}%)</p>
+    <p>Fonte: {{ progress.source }}</p>
+  </div>
+</div>

@@ -1,0 +1,25 @@
+<div class="card">
+  <h2>Domain Cycles</h2>
+  <form [formGroup]="form" (ngSubmit)="save()" class="row">
+    <mat-form-field appearance="outline">
+      <mat-label>Nome</mat-label>
+      <input matInput formControlName="name" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Início</mat-label>
+      <input matInput type="date" formControlName="startDate" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Fim</mat-label>
+      <input matInput type="date" formControlName="endDate" />
+    </mat-form-field>
+    <button mat-raised-button color="primary" type="submit">Adicionar</button>
+  </form>
+
+  <mat-list>
+    <mat-list-item *ngFor="let c of cycles">
+      <div matLine>{{ c.name }}</div>
+      <div matLine>{{ c.startDate }} - {{ c.endDate }}</div>
+    </mat-list-item>
+  </mat-list>
+</div>

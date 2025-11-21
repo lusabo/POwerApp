@@ -1,0 +1,15 @@
+<mat-toolbar color="primary">
+  <span>{{ title }}</span>
+  <span class="spacer"></span>
+  <a mat-button routerLink="/">Dashboard</a>
+  <a mat-button routerLink="/holidays">Feriados</a>
+  <a mat-button routerLink="/sprints">Sprints</a>
+  <a mat-button routerLink="/epics">Épicos</a>
+  <a mat-button routerLink="/domain-cycles">Domain Cycles</a>
+  <a mat-button routerLink="/team">Time</a>
+  <button mat-button *ngIf="auth.isAuthenticated()" (click)="logout()">Sair</button>
+</mat-toolbar>
+
+<div class="page-shell">
+  <router-outlet></router-outlet>
+</div>

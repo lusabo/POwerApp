@@ -1,0 +1,55 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: powerapp
+      POSTGRES_USER: ${DB_USER:-powerapp}
+      POSTGRES_PASSWORD: ${DB_PASS:-powerapp}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ../backend
+    env_file: ../.env.example
+    environment:
+      DB_JDBC_URL: jdbc:postgresql://postgres:5432/powerapp
+      DB_USER: ${DB_USER:-powerapp}
+      DB_PASS: ${DB_PASS:-powerapp}
+      JIRA_API_KEY: ${JIRA_API_KEY:-}
+      JIRA_API_EMAIL: ${JIRA_API_EMAIL:-}
+      JIRA_CLOUD_ID: ${JIRA_CLOUD_ID:-}
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../frontend
+    depends_on:
+      - backend
+    environment:
+      API_URL: http://localhost:8080
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  pgdata:

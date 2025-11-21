@@ -1,0 +1,21 @@
+<div class="page-shell">
+  <div class="card" style="max-width: 480px; margin: 80px auto;">
+    <h2>Criar conta</h2>
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Nome</mat-label>
+        <input matInput formControlName="name" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Email</mat-label>
+        <input matInput formControlName="email" type="email" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Senha</mat-label>
+        <input matInput formControlName="password" type="password" />
+      </mat-form-field>
+      <button mat-raised-button color="primary" type="submit">Registrar</button>
+      <a routerLink="/login" style="margin-left: 12px;">Já tenho conta</a>
+    </form>
+  </div>
+</div>
