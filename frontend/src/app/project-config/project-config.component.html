@@ -1,0 +1,32 @@
+<div class="card">
+  <h2>Configuração do Projeto</h2>
+  <p>Guarde o nome do projeto e detalhes do Jira usados pelas demais seções.</p>
+
+  <form [formGroup]="form" (ngSubmit)="save()" class="row">
+    <mat-form-field appearance="outline">
+      <mat-label>Nome do projeto</mat-label>
+      <input matInput formControlName="projectName" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Chave do Jira</mat-label>
+      <input matInput formControlName="jiraKey" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Board</mat-label>
+      <input matInput formControlName="board" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Time de feature</mat-label>
+      <input matInput formControlName="featureTeam" />
+    </mat-form-field>
+
+    <div class="actions">
+      <button mat-raised-button color="primary" type="submit" [disabled]="saving">
+        {{ saving ? "Salvando..." : "Salvar configuração" }}
+      </button>
+    </div>
+  </form>
+</div>

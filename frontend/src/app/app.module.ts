@@ -24,6 +24,7 @@ import { SprintsComponent } from './sprints/sprints.component';
 import { EpicsComponent } from './epics/epics.component';
 import { DomainCyclesComponent } from './domain-cycles/domain-cycles.component';
 import { TeamComponent } from './team/team.component';
+import { ProjectConfigComponent } from './project-config/project-config.component';
 import { ApiInterceptor } from './core/api.interceptor';
 
 @NgModule({
@@ -36,7 +37,8 @@ import { ApiInterceptor } from './core/api.interceptor';
     SprintsComponent,
     EpicsComponent,
     DomainCyclesComponent,
-    TeamComponent
+    TeamComponent,
+    ProjectConfigComponent
   ],
   imports: [
     BrowserModule,

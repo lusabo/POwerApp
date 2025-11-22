@@ -166,3 +166,26 @@ databaseChangeLog:
                     foreignKeyName: fk_unplanned_user
                     references: users(id)
 
+  - changeSet:
+      id: 8
+      author: codex
+      changes:
+        - createTable:
+            tableName: project_config
+            columns:
+              - column: {name: id, type: BIGSERIAL, constraints: {primaryKey: true}}
+              - column: {name: project_name, type: VARCHAR(255)}
+              - column: {name: jira_key, type: VARCHAR(255)}
+              - column: {name: board, type: VARCHAR(255)}
+              - column: {name: feature_team, type: VARCHAR(255)}
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_project_config_user
+                    references: users(id)
+        - addUniqueConstraint:
+            tableName: project_config
+            columnNames: user_id
+            constraintName: uq_project_config_user

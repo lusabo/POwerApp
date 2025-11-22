@@ -26,3 +26,11 @@ a {
   padding: 16px;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
 }
+
+.actions {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+}
