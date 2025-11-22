@@ -5,10 +5,17 @@ import com.powerapp.model.User;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ApplicationScoped
 public class ProjectConfigRepository implements PanacheRepository<ProjectConfig> {
+    private static final Logger log = LoggerFactory.getLogger(ProjectConfigRepository.class);
+
     public Optional<ProjectConfig> findByOwner(User owner) {
-        return find("owner", owner).firstResultOptional();
+        log.info("Iniciando método findByOwner(ownerId={})", owner != null ? owner.getId() : null);
+        Optional<ProjectConfig> result = find("owner", owner).firstResultOptional();
+        log.info("Finalizando método findByOwner com retorno presente: {}", result.isPresent());
+        return result;
     }
 }

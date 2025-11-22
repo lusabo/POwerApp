@@ -4,18 +4,23 @@ import com.powerapp.model.User;
 import com.powerapp.repository.UserRepository;
 import io.quarkus.security.UnauthorizedException;
 import jakarta.enterprise.context.RequestScoped;
-import jakarta.inject.Inject;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RequestScoped
 public class CurrentUser {
-    @Inject
-    JsonWebToken jwt;
+    private static final Logger log = LoggerFactory.getLogger(CurrentUser.class);
 
-    @Inject
-    UserRepository users;
+    private final JsonWebToken jwt;
+    private final UserRepository users;
 
     private User cached;
+
+    public CurrentUser(JsonWebToken jwt, UserRepository users) {
+        this.jwt = jwt;
+        this.users = users;
+    }
 
     public User get() {
         if (cached != null) {
@@ -27,6 +32,7 @@ public class CurrentUser {
         Long userId = Long.parseLong(jwt.getSubject());
         cached = users.findByIdOptional(userId)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
+        log.info("Finalizando método get com usuário {}", cached.getEmail());
         return cached;
     }
 }

@@ -3,29 +3,34 @@ package com.powerapp.service;
 import com.powerapp.dto.CapacityResponse;
 import com.powerapp.model.Holiday;
 import com.powerapp.model.Sprint;
-import com.powerapp.model.TeamMember;
 import com.powerapp.repository.HolidayRepository;
 import com.powerapp.repository.TeamMemberRepository;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ApplicationScoped
 public class CapacityService {
-    @Inject
-    HolidayRepository holidays;
+    private static final Logger log = LoggerFactory.getLogger(CapacityService.class);
 
-    @Inject
-    TeamMemberRepository teamMembers;
+    private final HolidayRepository holidays;
+    private final TeamMemberRepository teamMembers;
+
+    public CapacityService(HolidayRepository holidays, TeamMemberRepository teamMembers) {
+        this.holidays = holidays;
+        this.teamMembers = teamMembers;
+    }
 
     /**
      * Basic capacity model: working days excluding weekends/holidays multiplied by team size.
      */
     public CapacityResponse calculate(Sprint sprint) {
+        log.info("Iniciando método calculate(sprintId={})", sprint != null ? sprint.getId() : null);
         List<Holiday> holidayList = holidays.findByOwner(sprint.getOwner());
         Set<LocalDate> holidayDates = new HashSet<>();
         holidayList.forEach(h -> holidayDates.add(h.getDate()));
@@ -46,6 +51,8 @@ public class CapacityService {
         }
         int memberCount = teamMembers.findByOwner(sprint.getOwner()).size();
         int capacity = workingDays * Math.max(memberCount, 1);
-        return new CapacityResponse(sprint.getId(), capacity, workingDays, holidayDays);
+        CapacityResponse response = new CapacityResponse(sprint.getId(), capacity, workingDays, holidayDays);
+        log.info("Finalizando método calculate com retorno: capacity={} workingDays={} holidayDays={} members={}", capacity, workingDays, holidayDays, memberCount);
+        return response;
     }
 }
