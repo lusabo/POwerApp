@@ -26,6 +26,9 @@ public class ProjectConfig {
     @Column(name = "board")
     private String board;
 
+    @Column(name = "board_id")
+    private Long boardId;
+
     @Column(name = "feature_team")
     private String featureTeam;
 
@@ -63,6 +66,14 @@ public class ProjectConfig {
 
     public void setBoard(String board) {
         this.board = board;
+    }
+
+    public Long getBoardId() {
+        return boardId;
+    }
+
+    public void setBoardId(Long boardId) {
+        this.boardId = boardId;
     }
 
     public String getFeatureTeam() {

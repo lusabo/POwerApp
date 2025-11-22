@@ -38,6 +38,7 @@ public class JiraService {
     private final ProjectConfigRepository configs;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final String agileBaseUrl;
 
     public JiraService(
             @ConfigProperty(name = "jira.api.base-url") String baseUrl,
@@ -48,6 +49,7 @@ public class JiraService {
             ProjectConfigRepository configs,
             ObjectMapper objectMapper) {
         this.baseUrl = baseUrl;
+        this.agileBaseUrl = deriveAgileBaseUrl(baseUrl);
         this.effortSizeField = effortSizeField;
         this.featureTeamField = featureTeamField;
         this.parentLinkField = parentLinkField;
@@ -95,6 +97,35 @@ public class JiraService {
         );
         log.info("Finalizando método fetchEpicProgress com retorno: progress={}% issues={}/{}", progressPercentage, completedIssues, totalIssues);
         return response;
+    }
+
+    /**
+     * Resolve board id from Jira Agile API by exact name match.
+     */
+    public Long resolveBoardIdByName(String boardName, ProjectConfig config) {
+        log.info("Iniciando método resolveBoardIdByName(boardName={})", boardName);
+        JiraCredentials credentials = resolveCredentials(config);
+        Map<String, String> query = new HashMap<>();
+        query.put("name", boardName);
+        JsonNode body = getAgile("/board", query, credentials);
+        JsonNode values = body.path("values");
+        Long foundId = null;
+        for (JsonNode board : values) {
+            String name = board.path("name").asText();
+            if (boardName.equals(name)) {
+                if (foundId != null) {
+                    log.error("Erro em JiraService.resolveBoardIdByName: múltiplos boards com mesmo nome {}", boardName);
+                    throw new WebApplicationException("Múltiplos boards encontrados com o mesmo nome", Response.Status.BAD_REQUEST);
+                }
+                foundId = board.path("id").isIntegralNumber() ? board.path("id").asLong() : null;
+            }
+        }
+        if (foundId == null) {
+            log.error("Erro em JiraService.resolveBoardIdByName: board não encontrado {}", boardName);
+            throw new WebApplicationException("Board não encontrado no Jira", Response.Status.NOT_FOUND);
+        }
+        log.info("Finalizando método resolveBoardIdByName com boardId={}", foundId);
+        return foundId;
     }
 
     private JsonNode fetchEpic(String epicKey, JiraCredentials credentials) {
@@ -170,6 +201,36 @@ public class JiraService {
         }
     }
 
+    private JsonNode getAgile(String path, Map<String, String> queryParams, JiraCredentials credentials) {
+        String encodedQuery = buildQueryString(queryParams);
+        URI uri = URI.create(agileBaseUrl + path + encodedQuery);
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(uri)
+                .header("Accept", "application/json")
+                .header("Authorization", credentials.authorizationHeader())
+                .GET();
+        try {
+            log.info("Iniciando método getAgile(uri={})", uri);
+            HttpResponse<String> response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+            int statusCode = response.statusCode();
+            JsonNode body = safeParse(response.body());
+            if (statusCode >= 400) {
+                log.error("Erro em JiraService.getAgile: status {} body={}", statusCode, response.body());
+                throw new WebApplicationException("Erro ao buscar dados no Jira Agile (" + statusCode + ")", Response.Status.BAD_GATEWAY);
+            }
+            JsonNode parsed = body != null ? body : objectMapper.readTree(response.body());
+            log.info("Finalizando método getAgile(uri={}) com status {}", uri, statusCode);
+            return parsed;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Erro em JiraService.getAgile: interrupção ao chamar {}", uri, e);
+            throw new WebApplicationException("Falha ao comunicar com o Jira Agile", Response.Status.BAD_GATEWAY);
+        } catch (IOException e) {
+            log.error("Erro em JiraService.getAgile: I/O ao chamar {}", uri, e);
+            throw new WebApplicationException("Falha ao comunicar com o Jira Agile", Response.Status.BAD_GATEWAY);
+        }
+    }
+
     private JiraCredentials resolveCredentials(ProjectConfig config) {
         log.debug("Iniciando método resolveCredentials(projectConfigId={})", config != null ? config.getId() : null);
         String token = Optional.ofNullable(config.getJiraKey())
@@ -182,6 +243,17 @@ public class JiraService {
         String header = "Bearer " + token;
         log.debug("Finalizando método resolveCredentials");
         return new JiraCredentials(header);
+    }
+
+    private String deriveAgileBaseUrl(String apiBaseUrl) {
+        if (apiBaseUrl == null) {
+            return "/rest/agile/1.0";
+        }
+        String withoutApi = apiBaseUrl.replaceFirst("/rest/api/2/?$", "");
+        if (withoutApi.equals(apiBaseUrl)) {
+            return apiBaseUrl + "/rest/agile/1.0";
+        }
+        return withoutApi + "/rest/agile/1.0";
     }
 
     private String buildQueryString(Map<String, String> params) {

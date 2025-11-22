@@ -189,3 +189,14 @@ databaseChangeLog:
             tableName: project_config
             columnNames: user_id
             constraintName: uq_project_config_user
+
+  - changeSet:
+      id: 10
+      author: codex
+      changes:
+        - addColumn:
+            tableName: project_config
+            columns:
+              - column:
+                  name: board_id
+                  type: BIGINT

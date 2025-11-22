@@ -6,6 +6,7 @@ import com.powerapp.model.ProjectConfig;
 import com.powerapp.model.User;
 import com.powerapp.repository.ProjectConfigRepository;
 import com.powerapp.security.CurrentUser;
+import com.powerapp.service.JiraService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.Consumes;
@@ -27,10 +28,12 @@ public class ProjectConfigResource {
 
     private final ProjectConfigRepository configs;
     private final CurrentUser currentUser;
+    private final JiraService jiraService;
 
-    public ProjectConfigResource(ProjectConfigRepository configs, CurrentUser currentUser) {
+    public ProjectConfigResource(ProjectConfigRepository configs, CurrentUser currentUser, JiraService jiraService) {
         this.configs = configs;
         this.currentUser = currentUser;
+        this.jiraService = jiraService;
     }
 
     @GET
@@ -38,7 +41,7 @@ public class ProjectConfigResource {
         log.info("Iniciando método get()");
         ProjectConfigResponse response = configs.findByOwner(currentUser.get())
                 .map(ProjectConfigResponse::fromEntity)
-                .orElse(new ProjectConfigResponse(null, null, null, null));
+                .orElse(new ProjectConfigResponse(null, null, null, null, null));
         log.info("Finalizando método get com retorno: projectName={}", response.projectName);
         return response;
     }
@@ -56,6 +59,13 @@ public class ProjectConfigResource {
         config.setProjectName(request.projectName);
         config.setJiraKey(request.jiraKey);
         config.setBoard(request.board);
+        // Resolve board id via Jira Agile API when board name is provided.
+        if (request.board != null && !request.board.isBlank()) {
+            Long resolvedBoardId = jiraService.resolveBoardIdByName(request.board, config);
+            config.setBoardId(resolvedBoardId);
+        } else {
+            config.setBoardId(null);
+        }
         config.setFeatureTeam(request.featureTeam);
         if (config.getId() == null) {
             configs.persist(config);
