@@ -16,10 +16,20 @@
     <button mat-raised-button color="primary" type="submit">Adicionar</button>
   </form>
 
-  <mat-list>
-    <mat-list-item *ngFor="let c of cycles">
-      <div matLine>{{ c.name }}</div>
-      <div matLine>{{ c.startDate }} - {{ c.endDate }}</div>
-    </mat-list-item>
-  </mat-list>
+  <table mat-table [dataSource]="cycles" class="mat-elevation-z1 full">
+    <ng-container matColumnDef="id">
+      <th mat-header-cell *matHeaderCellDef>#</th>
+      <td mat-cell *matCellDef="let c">{{ c.id }}</td>
+    </ng-container>
+    <ng-container matColumnDef="name">
+      <th mat-header-cell *matHeaderCellDef>Nome</th>
+      <td mat-cell *matCellDef="let c">{{ c.name }}</td>
+    </ng-container>
+    <ng-container matColumnDef="dates">
+      <th mat-header-cell *matHeaderCellDef>Período</th>
+      <td mat-cell *matCellDef="let c">{{ c.startDate | date: 'dd/MM/yyyy' }} - {{ c.endDate | date: 'dd/MM/yyyy' }}</td>
+    </ng-container>
+    <tr mat-header-row *matHeaderRowDef="['id', 'name', 'dates']"></tr>
+    <tr mat-row *matRowDef="let row; columns: ['id', 'name', 'dates'];"></tr>
+  </table>
 </div>

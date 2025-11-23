@@ -5,5 +5,6 @@ public class ProjectConfigRequest {
     public String jiraKey;
     public String board;
     public Long boardId;
+    public Integer ceremoniesDays;
     public String featureTeam;
 }

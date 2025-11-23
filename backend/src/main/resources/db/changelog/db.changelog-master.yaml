@@ -200,3 +200,50 @@ databaseChangeLog:
               - column:
                   name: board_id
                   type: BIGINT
+
+  - changeSet:
+      id: 11
+      author: codex
+      changes:
+        - addColumn:
+            tableName: sprints
+            columns:
+              - column:
+                  name: jira_sprint_id
+                  type: BIGINT
+
+  - changeSet:
+      id: 12
+      author: codex
+      changes:
+        - dropColumn:
+            columnName: weekly_load
+            tableName: team_members
+
+  - changeSet:
+      id: 13
+      author: codex
+      changes:
+        - addColumn:
+            tableName: project_config
+            columns:
+              - column:
+                  name: ceremonies_days
+                  type: INT
+
+  - changeSet:
+      id: 14
+      author: codex
+      changes:
+        - addColumn:
+            tableName: epics
+            columns:
+              - column: {name: effort_size, type: VARCHAR(50)}
+              - column: {name: issues_count, type: INT}
+              - column: {name: story_points_sum, type: "DECIMAL(18,2)"}
+              - column:
+                  name: domain_cycle_id
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_epic_domain_cycle
+                    references: domain_cycles(id)

@@ -9,6 +9,7 @@ interface ProjectConfig {
   jiraKey: string | null;
   board: string | null;
   boardId: number | null;
+  ceremoniesDays: number | null;
   featureTeam: string | null;
 }
 
@@ -23,6 +24,7 @@ export class ProjectConfigComponent implements OnInit {
     jiraKey: ['', Validators.required],
     board: ['', Validators.required],
     boardId: [{ value: '', disabled: true }],
+    ceremoniesDays: [''],
     featureTeam: ['']
   });
 
@@ -39,6 +41,7 @@ export class ProjectConfigComponent implements OnInit {
         jiraKey: config.jiraKey ?? '',
         board: config.board ?? '',
         boardId: config.boardId?.toString() ?? '',
+        ceremoniesDays: config.ceremoniesDays?.toString() ?? '',
         featureTeam: config.featureTeam ?? ''
       });
     });
@@ -57,6 +60,7 @@ export class ProjectConfigComponent implements OnInit {
           jiraKey: config.jiraKey ?? '',
           board: config.board ?? '',
           boardId: config.boardId?.toString() ?? '',
+          ceremoniesDays: config.ceremoniesDays?.toString() ?? '',
           featureTeam: config.featureTeam ?? ''
         });
         this.snack.open('Configuração salva com sucesso', 'Fechar', { duration: 2000 });

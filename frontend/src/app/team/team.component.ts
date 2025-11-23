@@ -7,7 +7,6 @@ interface TeamMember {
   id: number;
   name: string;
   role?: string;
-  weeklyLoadHours?: number;
 }
 
 @Component({
@@ -18,8 +17,7 @@ export class TeamComponent implements OnInit {
   members: TeamMember[] = [];
   form = this.fb.group({
     name: ['', Validators.required],
-    role: [''],
-    weeklyLoadHours: [null]
+    role: ['']
   });
 
   constructor(private http: HttpClient, private fb: FormBuilder) {}

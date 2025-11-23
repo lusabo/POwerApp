@@ -1,15 +1,27 @@
 package com.powerapp.resource;
 
 import com.powerapp.dto.EpicProgressResponse;
+import com.powerapp.dto.EpicRequest;
+import com.powerapp.dto.EpicResponse;
+import com.powerapp.model.DomainCycle;
 import com.powerapp.model.User;
+import com.powerapp.repository.DomainCycleRepository;
+import com.powerapp.repository.EpicRepository;
 import com.powerapp.security.CurrentUser;
 import com.powerapp.service.JiraService;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.transaction.Transactional;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import java.math.BigDecimal;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,10 +33,14 @@ public class EpicResource {
 
     private final CurrentUser currentUser;
     private final JiraService jiraService;
+    private final EpicRepository epics;
+    private final DomainCycleRepository domainCycles;
 
-    public EpicResource(CurrentUser currentUser, JiraService jiraService) {
+    public EpicResource(CurrentUser currentUser, JiraService jiraService, EpicRepository epics, DomainCycleRepository domainCycles) {
         this.currentUser = currentUser;
         this.jiraService = jiraService;
+        this.epics = epics;
+        this.domainCycles = domainCycles;
     }
 
     @GET
@@ -35,5 +51,63 @@ public class EpicResource {
         EpicProgressResponse response = jiraService.fetchEpicProgress(epicKey, user);
         log.info("Finalizando método get com retorno: progress={}", response.progressPercentage);
         return response;
+    }
+
+    @GET
+    public List<EpicResponse> list(@QueryParam("domainCycleId") Long domainCycleId) {
+        User user = currentUser.get();
+        return epics.findByOwnerAndDomainCycle(user, domainCycleId).stream()
+                .map(EpicResponse::fromEntity)
+                .toList();
+    }
+
+    @POST
+    @Transactional
+    public Response save(EpicRequest request) {
+        if (request == null || request.epicKey == null || request.epicKey.isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Epic key é obrigatória").build();
+        }
+        User user = currentUser.get();
+        DomainCycle dc = null;
+        if (request.domainCycleId != null) {
+            dc = domainCycles.findById(request.domainCycleId);
+            if (dc == null || !dc.getOwner().getId().equals(user.getId())) {
+                return Response.status(Response.Status.BAD_REQUEST).entity("Domain cycle inválido").build();
+            }
+        }
+        JiraService.EpicStats stats = jiraService.fetchEpicStats(request.epicKey, user);
+
+        var epic = epics.findByKeyAndOwner(request.epicKey, user).orElseGet(com.powerapp.model.Epic::new);
+        epic.setOwner(user);
+        epic.setEpicKey(request.epicKey);
+        epic.setName(stats.epicName());
+        epic.setEffortSize(stats.effortSize());
+        epic.setIssuesCount(stats.issuesCount());
+        epic.setStoryPointsSum(BigDecimal.valueOf(stats.storyPointsSum()));
+        epic.setDomainCycle(dc);
+        if (epic.getId() == null) {
+            epics.persist(epic);
+        }
+        return Response.ok(EpicResponse.fromEntity(epic)).build();
+    }
+
+    @POST
+    @Path("/reload")
+    @Transactional
+    public Response reload() {
+        User user = currentUser.get();
+        List<com.powerapp.model.Epic> all = epics.findByOwner(user);
+        for (com.powerapp.model.Epic epic : all) {
+            try {
+                JiraService.EpicStats stats = jiraService.fetchEpicStats(epic.getEpicKey(), user);
+                epic.setName(stats.epicName());
+                epic.setEffortSize(stats.effortSize());
+                epic.setIssuesCount(stats.issuesCount());
+                epic.setStoryPointsSum(BigDecimal.valueOf(stats.storyPointsSum()));
+            } catch (WebApplicationException e) {
+                log.error("Falha ao atualizar épico {}: {}", epic.getEpicKey(), e.getMessage());
+            }
+        }
+        return Response.ok(all.stream().map(EpicResponse::fromEntity).toList()).build();
     }
 }

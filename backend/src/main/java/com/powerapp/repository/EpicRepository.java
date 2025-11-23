@@ -26,4 +26,11 @@ public class EpicRepository implements PanacheRepository<Epic> {
         log.info("Finalizando método findByKeyAndOwner com retorno presente: {}", result.isPresent());
         return result;
     }
+
+    public List<Epic> findByOwnerAndDomainCycle(User owner, Long domainCycleId) {
+        if (domainCycleId == null) {
+            return find("owner", owner).list();
+        }
+        return find("owner = ?1 and domainCycle.id = ?2", owner, domainCycleId).list();
+    }
 }

@@ -33,6 +33,9 @@ public class Sprint {
     @Column(name = "sp_completed")
     private Integer storyPointsCompleted;
 
+    @Column(name = "jira_sprint_id")
+    private Long jiraSprintId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "domain_cycle_id")
     private DomainCycle domainCycle;
@@ -87,6 +90,14 @@ public class Sprint {
 
     public void setStoryPointsCompleted(Integer storyPointsCompleted) {
         this.storyPointsCompleted = storyPointsCompleted;
+    }
+
+    public Long getJiraSprintId() {
+        return jiraSprintId;
+    }
+
+    public void setJiraSprintId(Long jiraSprintId) {
+        this.jiraSprintId = jiraSprintId;
     }
 
     public DomainCycle getDomainCycle() {

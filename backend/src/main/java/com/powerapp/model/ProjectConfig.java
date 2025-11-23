@@ -29,6 +29,9 @@ public class ProjectConfig {
     @Column(name = "board_id")
     private Long boardId;
 
+    @Column(name = "ceremonies_days")
+    private Integer ceremoniesDays;
+
     @Column(name = "feature_team")
     private String featureTeam;
 
@@ -74,6 +77,14 @@ public class ProjectConfig {
 
     public void setBoardId(Long boardId) {
         this.boardId = boardId;
+    }
+
+    public Integer getCeremoniesDays() {
+        return ceremoniesDays;
+    }
+
+    public void setCeremoniesDays(Integer ceremoniesDays) {
+        this.ceremoniesDays = ceremoniesDays;
     }
 
     public String getFeatureTeam() {

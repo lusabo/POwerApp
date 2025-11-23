@@ -1,6 +1,9 @@
 package com.powerapp.service;
 
 import com.powerapp.dto.EpicProgressResponse;
+import com.powerapp.dto.SprintJiraResponse;
+import com.powerapp.jira.JiraField;
+import com.powerapp.jira.JiraFieldResolver;
 import com.powerapp.model.ProjectConfig;
 import com.powerapp.model.User;
 import com.powerapp.repository.ProjectConfigRepository;
@@ -31,31 +34,52 @@ public class JiraService {
     private static final Logger log = LoggerFactory.getLogger(JiraService.class);
 
     private final String baseUrl;
-    private final Optional<String> effortSizeField;
-    private final Optional<String> featureTeamField;
-    private final Optional<String> parentLinkField;
-    private final Optional<String> storyPointsField;
     private final ProjectConfigRepository configs;
+    private final JiraFieldResolver fieldResolver;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final String agileBaseUrl;
 
     public JiraService(
             @ConfigProperty(name = "jira.api.base-url") String baseUrl,
-            @ConfigProperty(name = "jira.api.effort-field") Optional<String> effortSizeField,
-            @ConfigProperty(name = "jira.api.feature-team-field") Optional<String> featureTeamField,
-            @ConfigProperty(name = "jira.api.parent-link-field") Optional<String> parentLinkField,
-            @ConfigProperty(name = "jira.api.story-points-field") Optional<String> storyPointsField,
             ProjectConfigRepository configs,
+            JiraFieldResolver fieldResolver,
             ObjectMapper objectMapper) {
         this.baseUrl = baseUrl;
         this.agileBaseUrl = deriveAgileBaseUrl(baseUrl);
-        this.effortSizeField = effortSizeField;
-        this.featureTeamField = featureTeamField;
-        this.parentLinkField = parentLinkField;
-        this.storyPointsField = storyPointsField;
         this.configs = configs;
+        this.fieldResolver = fieldResolver;
         this.objectMapper = objectMapper;
+    }
+
+    public SprintJiraResponse fetchSprintSummary(String sprintName, User user) {
+        log.info("Iniciando método fetchSprintSummary(sprintName={}, userId={})", sprintName, user != null ? user.getId() : null);
+        if (baseUrl == null || baseUrl.isBlank()) {
+            throw new WebApplicationException("Configure a base URL do Jira e o token do projeto para habilitar a busca no Jira", Response.Status.BAD_REQUEST);
+        }
+        ProjectConfig config = configs.findByOwner(user)
+                .orElseThrow(() -> new WebApplicationException("Configure o projeto antes de buscar sprints", Response.Status.BAD_REQUEST));
+        if (config.getBoard() == null || config.getBoard().isBlank()) {
+            throw new WebApplicationException("Configure o board do Jira antes de buscar sprints", Response.Status.BAD_REQUEST);
+        }
+        JiraCredentials credentials = resolveCredentials(config);
+        Long boardId = config.getBoardId();
+        if (boardId == null || boardId == 0) {
+            boardId = getBoardIdExact(config.getBoard(), credentials);
+        }
+        Long sprintId = getSprintIdExact(boardId, sprintName, credentials);
+        SprintDates dates = getSprintDates(sprintId, credentials);
+        double storyPoints = getCompletedStoryPoints(config.getBoard(), sprintName, credentials);
+        SprintJiraResponse response = new SprintJiraResponse(
+                sprintId,
+                sprintName,
+                dates.startDate(),
+                dates.endDate(),
+                dates.completeDate(),
+                storyPoints
+        );
+        log.info("Finalizando método fetchSprintSummary com retorno: sprintId={} storyPoints={}", sprintId, storyPoints);
+        return response;
     }
 
     public EpicProgressResponse fetchEpicProgress(String epicKey, User user) {
@@ -71,7 +95,7 @@ public class JiraService {
                 .filter(v -> !v.isBlank())
                 .orElseThrow(() -> new WebApplicationException("Configure a Feature Team antes de buscar épicos", Response.Status.BAD_REQUEST));
 
-        String storyPointsFieldName = storyPointsField.filter(v -> !v.isBlank()).orElse("Story Points");
+        String storyPointsFieldName = resolveStoryPointsField();
 
         // Ensure the epic exists before proceeding.
         fetchEpic(epicKey, credentials);
@@ -99,12 +123,62 @@ public class JiraService {
         return response;
     }
 
+    public EpicStats fetchEpicStats(String epicKey, User user) {
+        log.info("Iniciando método fetchEpicStats(epicKey={}, userId={})", epicKey, user != null ? user.getId() : null);
+        if (baseUrl == null || baseUrl.isBlank()) {
+            throw new WebApplicationException("Configure a base URL do Jira e o token do projeto para habilitar a busca no Jira", Response.Status.BAD_REQUEST);
+        }
+        ProjectConfig config = configs.findByOwner(user)
+                .orElseThrow(() -> new WebApplicationException("Configure o projeto antes de buscar épicos", Response.Status.BAD_REQUEST));
+        JiraCredentials credentials = resolveCredentials(config);
+
+        String featureTeam = Optional.ofNullable(config.getFeatureTeam())
+                .filter(v -> !v.isBlank())
+                .orElseThrow(() -> new WebApplicationException("Configure a Feature Team antes de buscar épicos", Response.Status.BAD_REQUEST));
+
+        String storyPointsFieldName = resolveStoryPointsField();
+        
+        JsonNode epicNode = fetchEpic(epicKey, credentials);
+        JsonNode issues = fetchIssues(epicKey, featureTeam, storyPointsFieldName, credentials);
+
+        int issuesCount = issues.path("issues").size();
+        double spSum = 0d;
+        for (JsonNode issue : issues.path("issues")) {
+            JsonNode fields = issue.path(FIELDS);
+            spSum += fields.path(storyPointsFieldName).asDouble(0d);
+        }
+        String effortSizeFieldName = resolveEffortSizeField();
+        String effortSize = extractFieldText(epicNode.path("fields").path(effortSizeFieldName));
+        String epicName = epicNode.path("fields").path("summary").asText(epicKey);
+        EpicStats stats = new EpicStats(epicName, effortSize, issuesCount, spSum);
+        log.info("Finalizando método fetchEpicStats: issues={} spSum={}", issuesCount, spSum);
+        return stats;
+    }
+
     /**
      * Resolve board id from Jira Agile API by exact name match.
      */
     public Long resolveBoardIdByName(String boardName, ProjectConfig config) {
-        log.info("Iniciando método resolveBoardIdByName(boardName={})", boardName);
         JiraCredentials credentials = resolveCredentials(config);
+        return getBoardIdExact(boardName, credentials);
+    }
+
+    private JsonNode fetchEpic(String epicKey, JiraCredentials credentials) {
+        log.debug("Iniciando método fetchEpic(epicKey={})", epicKey);
+        Map<String, String> query = new HashMap<>();
+        String effortField = resolveEffortSizeField();
+        if (effortField != null && !effortField.isBlank()) {
+            query.put(FIELDS, String.join(",", effortField, "summary"));
+        } else {
+            query.put(FIELDS, "summary");
+        }
+        JsonNode response = get("/issue/" + epicKey, query, credentials);
+        log.debug("Finalizando método fetchEpic");
+        return response;
+    }
+
+    public Long getBoardIdExact(String boardName, JiraCredentials credentials) {
+        log.info("Iniciando método getBoardIdExact(boardName={})", boardName);
         Map<String, String> query = new HashMap<>();
         query.put("name", boardName);
         JsonNode body = getAgile("/board", query, credentials);
@@ -114,42 +188,86 @@ public class JiraService {
             String name = board.path("name").asText();
             if (boardName.equals(name)) {
                 if (foundId != null) {
-                    log.error("Erro em JiraService.resolveBoardIdByName: múltiplos boards com mesmo nome {}", boardName);
+                    log.error("Erro em getBoardIdExact: múltiplos boards com nome {}", boardName);
                     throw new WebApplicationException("Múltiplos boards encontrados com o mesmo nome", Response.Status.BAD_REQUEST);
                 }
                 foundId = board.path("id").isIntegralNumber() ? board.path("id").asLong() : null;
             }
         }
         if (foundId == null) {
-            log.error("Erro em JiraService.resolveBoardIdByName: board não encontrado {}", boardName);
-            throw new WebApplicationException("Board não encontrado no Jira", Response.Status.NOT_FOUND);
+            throw new WebApplicationException("Board não encontrado", Response.Status.NOT_FOUND);
         }
-        log.info("Finalizando método resolveBoardIdByName com boardId={}", foundId);
+        log.info("Finalizando método getBoardIdExact com boardId={}", foundId);
         return foundId;
     }
 
-    private JsonNode fetchEpic(String epicKey, JiraCredentials credentials) {
-        log.debug("Iniciando método fetchEpic(epicKey={})", epicKey);
-        Map<String, String> query = new HashMap<>();
-        effortSizeField.filter(v -> !v.isBlank()).ifPresent(field -> query.put(FIELDS, field));
-        JsonNode response = get("/issue/" + epicKey, query, credentials);
-        log.debug("Finalizando método fetchEpic");
-        return response;
+    public Long getSprintIdExact(Long boardId, String sprintName, JiraCredentials credentials) {
+        log.info("Iniciando método getSprintIdExact(boardId={}, sprintName={})", boardId, sprintName);
+        long startAt = 0;
+        while (true) {
+            Map<String, String> query = new HashMap<>();
+            query.put("state", "closed");
+            query.put("startAt", String.valueOf(startAt));
+            JsonNode body = getAgile("/board/" + boardId + "/sprint", query, credentials);
+            JsonNode values = body.path("values");
+            for (JsonNode sprint : values) {
+                String name = sprint.path("name").asText();
+                if (sprintName.equals(name)) {
+                    Long sprintId = sprint.path("id").isIntegralNumber() ? sprint.path("id").asLong() : null;
+                    log.info("Finalizando método getSprintIdExact com sprintId={}", sprintId);
+                    return sprintId;
+                }
+            }
+            boolean isLast = body.path("isLast").asBoolean(true);
+            int maxResults = body.path("maxResults").asInt(0);
+            if (isLast) {
+                log.warn("Sprint não encontrada no board após paginação completa");
+                return null;
+            }
+            startAt += maxResults;
+        }
+    }
+
+    public SprintDates getSprintDates(Long sprintId, JiraCredentials credentials) {
+        log.info("Iniciando método getSprintDates(sprintId={})", sprintId);
+        JsonNode body = getAgile("/sprint/" + sprintId, Map.of(), credentials);
+        String start = body.path("startDate").asText(null);
+        String end = body.path("endDate").asText(null);
+        String complete = body.path("completeDate").asText(null);
+        log.info("Finalizando método getSprintDates com start={} end={} complete={}", start, end, complete);
+        return new SprintDates(start, end, complete);
+    }
+
+    public double getCompletedStoryPoints(String boardName, String sprintName, JiraCredentials credentials) {
+        log.info("Iniciando método getCompletedStoryPoints(boardName={}, sprintName={})", boardName, sprintName);
+        String jql = "issueFunction in completeInSprint(\"" + boardName + "\", \"" + sprintName + "\")";
+        String query = baseUrl + "/search?jql=" + URLEncoder.encode(jql, StandardCharsets.UTF_8)
+                + "&fields=" + resolveStoryPointsField() + ",issuetype&maxResults=" + MAX_RESULTS;
+        JsonNode body = httpGet(query, credentials);
+        double total = 0d;
+        for (JsonNode issue : body.path("issues")) {
+            JsonNode fields = issue.path("fields");
+            double sp = fields.path(resolveStoryPointsField()).asDouble(0d);
+            total += sp;
+        }
+        log.info("Finalizando método getCompletedStoryPoints com total={}", total);
+        return total;
     }
 
     private JsonNode fetchIssues(String epicKey, String featureTeam, String storyPointsFieldName, JiraCredentials credentials) {
         log.debug("Iniciando método fetchIssues(epicKey={}, featureTeam={})", epicKey, featureTeam);
-        String featureTeamFieldName = featureTeamField.filter(v -> !v.isBlank()).orElse("Feature Team");
-        String parentLinkFieldName = parentLinkField.filter(v -> !v.isBlank()).orElse("Parent Link");
+        String featureTeamFieldName = fieldResolver.getFriendlyName(JiraField.FEATURE_TEAM);
+        String parentLinkFieldName = fieldResolver.getFriendlyName(JiraField.PARENT_LINK);
         String jql = "\"" + parentLinkFieldName + "\" = " + epicKey
                 + " AND \"" + featureTeamFieldName + "\" = \"" + featureTeam + "\" "
                 + "AND ((issuetype in (Story, Task, Defect) "
                 + "AND (resolution NOT IN (\"Won't Do\", \"Duplicate\") OR resolution IS EMPTY)) "
                 + "OR (issuetype NOT IN (Story, Task, Defect)))";
 
+        String featureTeamFieldId = fieldResolver.getId(JiraField.FEATURE_TEAM);
         Map<String, String> query = new HashMap<>();
         query.put("jql", jql);
-        query.put(FIELDS, String.join(",", "issuetype", "status", storyPointsFieldName, featureTeamFieldName));
+        query.put(FIELDS, String.join(",", "issuetype", "status", storyPointsFieldName, featureTeamFieldId));
         query.put("maxResults", String.valueOf(MAX_RESULTS));
         JsonNode response = get("/search", query, credentials);
         log.debug("Finalizando método fetchIssues");
@@ -231,6 +349,30 @@ public class JiraService {
         }
     }
 
+    private JsonNode httpGet(String url, JiraCredentials credentials) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Accept", "application/json")
+                    .header("Authorization", credentials.authorizationHeader())
+                    .GET()
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            int status = response.statusCode();
+            if (status >= 400) {
+                log.error("Erro em httpGet: status {} body={}", status, response.body());
+                throw new WebApplicationException("Erro ao consultar Jira (" + status + ")", Response.Status.BAD_GATEWAY);
+            }
+            return objectMapper.readTree(response.body());
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            log.error("Erro em httpGet para url {}", url, e);
+            throw new WebApplicationException("Falha ao consultar Jira", Response.Status.BAD_GATEWAY);
+        }
+    }
+
     private JiraCredentials resolveCredentials(ProjectConfig config) {
         log.debug("Iniciando método resolveCredentials(projectConfigId={})", config != null ? config.getId() : null);
         String token = Optional.ofNullable(config.getJiraKey())
@@ -304,5 +446,40 @@ public class JiraService {
     }
 
     private record JiraCredentials(String authorizationHeader) {
+    }
+
+    private record SprintDates(String startDate, String endDate, String completeDate) {
+    }
+
+    public record EpicStats(String epicName, String effortSize, int issuesCount, double storyPointsSum) {
+    }
+
+    private String resolveStoryPointsField() {
+        String id = fieldResolver.getId(JiraField.STORY_POINTS);
+        if (id == null || id.isBlank()) {
+            throw new WebApplicationException("Configure jira.api.story-points-field", Response.Status.BAD_REQUEST);
+        }
+        return id;
+    }
+
+    private String resolveEffortSizeField() {
+        String id = fieldResolver.getId(JiraField.EFFORT);
+        if (id == null || id.isBlank()) {
+            throw new WebApplicationException("Configure jira.api.effort-field", Response.Status.BAD_REQUEST);
+        }
+        return id;
+    }
+
+    private String extractFieldText(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        if (node.isTextual()) {
+            return node.asText();
+        }
+        if (node.has("value")) {
+            return node.path("value").asText(null);
+        }
+        return node.asText(null);
     }
 }

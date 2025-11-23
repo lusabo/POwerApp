@@ -26,4 +26,11 @@ public class SprintRepository implements PanacheRepository<Sprint> {
         log.info("Finalizando método findByIdAndOwner com retorno presente: {}", result.isPresent());
         return result;
     }
+
+    public Optional<Sprint> findByNameAndOwner(String name, User owner) {
+        log.info("Iniciando método findByNameAndOwner(name={}, ownerId={})", name, owner != null ? owner.getId() : null);
+        Optional<Sprint> result = find("name = ?1 and owner = ?2", name, owner).firstResultOptional();
+        log.info("Finalizando método findByNameAndOwner com retorno presente: {}", result.isPresent());
+        return result;
+    }
 }

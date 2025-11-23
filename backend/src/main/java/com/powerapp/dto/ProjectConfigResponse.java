@@ -7,16 +7,18 @@ public class ProjectConfigResponse {
     public String jiraKey;
     public String board;
     public Long boardId;
+    public Integer ceremoniesDays;
     public String featureTeam;
 
     public ProjectConfigResponse() {
     }
 
-    public ProjectConfigResponse(String projectName, String jiraKey, String board, Long boardId, String featureTeam) {
+    public ProjectConfigResponse(String projectName, String jiraKey, String board, Long boardId, Integer ceremoniesDays, String featureTeam) {
         this.projectName = projectName;
         this.jiraKey = jiraKey;
         this.board = board;
         this.boardId = boardId;
+        this.ceremoniesDays = ceremoniesDays;
         this.featureTeam = featureTeam;
     }
 
@@ -26,6 +28,7 @@ public class ProjectConfigResponse {
                 config.getJiraKey(),
                 config.getBoard(),
                 config.getBoardId(),
+                config.getCeremoniesDays(),
                 config.getFeatureTeam()
         );
     }

@@ -41,7 +41,7 @@ public class ProjectConfigResource {
         log.info("Iniciando método get()");
         ProjectConfigResponse response = configs.findByOwner(currentUser.get())
                 .map(ProjectConfigResponse::fromEntity)
-                .orElse(new ProjectConfigResponse(null, null, null, null, null));
+                .orElse(new ProjectConfigResponse(null, null, null, null, null, null));
         log.info("Finalizando método get com retorno: projectName={}", response.projectName);
         return response;
     }
@@ -66,6 +66,7 @@ public class ProjectConfigResource {
         } else {
             config.setBoardId(null);
         }
+        config.setCeremoniesDays(request.ceremoniesDays);
         config.setFeatureTeam(request.featureTeam);
         if (config.getId() == null) {
             configs.persist(config);

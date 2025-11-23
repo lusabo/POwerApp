@@ -22,9 +22,6 @@ public class TeamMember {
 
     private String role;
 
-    @Column(name = "weekly_load")
-    private Integer weeklyLoadHours;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User owner;
@@ -51,14 +48,6 @@ public class TeamMember {
 
     public void setRole(String role) {
         this.role = role;
-    }
-
-    public Integer getWeeklyLoadHours() {
-        return weeklyLoadHours;
-    }
-
-    public void setWeeklyLoadHours(Integer weeklyLoadHours) {
-        this.weeklyLoadHours = weeklyLoadHours;
     }
 
     public User getOwner() {

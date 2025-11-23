@@ -1,6 +1,8 @@
 package com.powerapp.resource;
 
 import com.powerapp.dto.CapacityResponse;
+import com.powerapp.dto.SprintJiraRequest;
+import com.powerapp.dto.SprintJiraResponse;
 import com.powerapp.dto.SprintRequest;
 import com.powerapp.model.DomainCycle;
 import com.powerapp.model.Sprint;
@@ -10,6 +12,7 @@ import com.powerapp.repository.SprintRepository;
 import com.powerapp.repository.UnplannedRepository;
 import com.powerapp.security.CurrentUser;
 import com.powerapp.service.CapacityService;
+import com.powerapp.service.JiraService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.Consumes;
@@ -36,17 +39,20 @@ public class SprintResource {
     private final CurrentUser currentUser;
     private final CapacityService capacityService;
     private final UnplannedRepository unplannedItems;
+    private final JiraService jiraService;
 
     public SprintResource(SprintRepository sprints,
                           DomainCycleRepository domainCycles,
                           CurrentUser currentUser,
                           CapacityService capacityService,
-                          UnplannedRepository unplannedItems) {
+                          UnplannedRepository unplannedItems,
+                          JiraService jiraService) {
         this.sprints = sprints;
         this.domainCycles = domainCycles;
         this.currentUser = currentUser;
         this.capacityService = capacityService;
         this.unplannedItems = unplannedItems;
+        this.jiraService = jiraService;
     }
 
     @POST
@@ -118,5 +124,38 @@ public class SprintResource {
         Response response = Response.ok(unplannedItems.findBySprint(sprint)).build();
         log.info("Finalizando método unplanned com status {}", response.getStatus());
         return response;
+    }
+
+    @POST
+    @Path("/jira")
+    public Response jiraSprint(SprintJiraRequest request) {
+        String sprintName = request != null ? request.sprintName : null;
+        log.info("Iniciando método jiraSprint(name={})", sprintName);
+        if (sprintName == null || sprintName.isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Informe o nome exato da sprint").build();
+        }
+        User user = currentUser.get();
+        SprintJiraResponse summary = jiraService.fetchSprintSummary(sprintName, user);
+        if (summary.startDate == null || summary.endDate == null) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Sprint sem datas na API do Jira").build();
+        }
+        persistSprintFromSummary(summary, user);
+        Response response = Response.ok(summary).build();
+        log.info("Finalizando método jiraSprint com status {}", response.getStatus());
+        return response;
+    }
+
+    @Transactional
+    void persistSprintFromSummary(SprintJiraResponse summary, User user) {
+        Sprint sprint = sprints.findByNameAndOwner(summary.sprintName, user).orElseGet(Sprint::new);
+        sprint.setOwner(user);
+        sprint.setName(summary.sprintName);
+        sprint.setJiraSprintId(summary.sprintId);
+        sprint.setStartDate(java.time.OffsetDateTime.parse(summary.startDate).toLocalDate());
+        sprint.setEndDate(java.time.OffsetDateTime.parse(summary.endDate).toLocalDate());
+        sprint.setStoryPointsCompleted((int) Math.round(summary.storyPointsDelivered));
+        if (sprint.getId() == null) {
+            sprints.persist(sprint);
+        }
     }
 }

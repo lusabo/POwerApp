@@ -2,5 +2,5 @@ package com.powerapp.dto;
 
 public class EpicRequest {
     public String epicKey;
-    public String name;
+    public Long domainCycleId;
 }

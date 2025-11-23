@@ -44,7 +44,6 @@ public class TeamResource {
         TeamMember member = new TeamMember();
         member.setName(request.name);
         member.setRole(request.role);
-        member.setWeeklyLoadHours(request.weeklyLoadHours);
         member.setOwner(user);
         teamMembers.persist(member);
         Response response = Response.status(Response.Status.CREATED).entity(member).build();
@@ -71,7 +70,6 @@ public class TeamResource {
         }
         member.setName(request.name);
         member.setRole(request.role);
-        member.setWeeklyLoadHours(request.weeklyLoadHours);
         Response response = Response.ok(member).build();
         log.info("Finalizando método update com status {}", response.getStatus());
         return response;
