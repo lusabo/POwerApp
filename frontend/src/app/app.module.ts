@@ -23,6 +23,8 @@ import { RegisterComponent } from './auth/register.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { HolidaysComponent } from './holidays/holidays.component';
 import { SprintsComponent } from './sprints/sprints.component';
+import { SprintFormComponent } from './sprints/sprint-form.component';
+import { SprintTableComponent } from './sprints/sprint-table.component';
 import { EpicsComponent } from './epics/epics.component';
 import { DomainCyclesComponent } from './domain-cycles/domain-cycles.component';
 import { TeamComponent } from './team/team.component';
@@ -37,6 +39,8 @@ import { ApiInterceptor } from './core/api.interceptor';
     DashboardComponent,
     HolidaysComponent,
     SprintsComponent,
+    SprintFormComponent,
+    SprintTableComponent,
     EpicsComponent,
     DomainCyclesComponent,
     TeamComponent,

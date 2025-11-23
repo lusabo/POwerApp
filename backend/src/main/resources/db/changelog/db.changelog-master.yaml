@@ -247,3 +247,46 @@ databaseChangeLog:
                   constraints:
                     foreignKeyName: fk_epic_domain_cycle
                     references: domain_cycles(id)
+
+  - changeSet:
+      id: 15
+      author: codex
+      changes:
+        - addColumn:
+            tableName: sprints
+            columns:
+              - column: {name: operations_spikes_days, type: INT}
+              - column: {name: working_days, type: INT}
+              - column: {name: ceremony_days, type: INT}
+              - column: {name: holiday_days, type: INT}
+              - column: {name: net_capacity_days, type: INT}
+              - column: {name: team_size, type: INT}
+              - column: {name: absences_days, type: INT}
+              - column: {name: capacity_total, type: INT}
+              - column: {name: capacity_percent, type: "DECIMAL(10,4)"}
+              - column: {name: capacity_final, type: INT}
+              - column: {name: capacity_final_percent, type: "DECIMAL(10,4)"}
+
+  - changeSet:
+      id: 16
+      author: codex
+      changes:
+        - createTable:
+            tableName: sprint_absences
+            columns:
+              - column: {name: id, type: BIGSERIAL, constraints: {primaryKey: true}}
+              - column: {name: sprint_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: team_member_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: days, type: INT}
+        - addForeignKeyConstraint:
+            baseTableName: sprint_absences
+            baseColumnNames: sprint_id
+            referencedTableName: sprints
+            referencedColumnNames: id
+            constraintName: fk_absence_sprint
+        - addForeignKeyConstraint:
+            baseTableName: sprint_absences
+            baseColumnNames: team_member_id
+            referencedTableName: team_members
+            referencedColumnNames: id
+            constraintName: fk_absence_member

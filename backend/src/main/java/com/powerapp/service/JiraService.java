@@ -462,6 +462,19 @@ public class JiraService {
         return id;
     }
 
+    public boolean isSprintClosed(Long sprintId, User user) {
+        if (sprintId == null) {
+            return false;
+        }
+        JiraCredentials credentials = resolveCredentials(
+                configs.findByOwner(user)
+                        .orElseThrow(() -> new WebApplicationException("Configure o projeto antes de buscar sprints", Response.Status.BAD_REQUEST))
+        );
+        JsonNode node = getAgile("/sprint/" + sprintId, Map.of(), credentials);
+        String state = node.path("state").asText("");
+        return "closed".equalsIgnoreCase(state);
+    }
+
     private String resolveEffortSizeField() {
         String id = fieldResolver.getId(JiraField.EFFORT);
         if (id == null || id.isBlank()) {

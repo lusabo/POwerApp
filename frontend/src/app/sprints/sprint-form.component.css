@@ -1,0 +1,28 @@
+.form-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+}
+
+.absences {
+  margin-top: 16px;
+}
+
+.abs-row {
+  display: grid;
+  grid-template-columns: 1fr 140px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.save-btn {
+  margin-top: 16px;
+  padding: 8px 16px;
+}
