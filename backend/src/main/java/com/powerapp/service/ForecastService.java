@@ -2,9 +2,9 @@ package com.powerapp.service;
 
 import com.powerapp.dto.AlertResponse;
 import com.powerapp.dto.ForecastResponse;
-import com.powerapp.model.DomainCycle;
-import com.powerapp.model.Sprint;
-import com.powerapp.model.User;
+import com.powerapp.entity.DomainCycle;
+import com.powerapp.entity.Sprint;
+import com.powerapp.entity.User;
 import com.powerapp.repository.DomainCycleRepository;
 import com.powerapp.repository.SprintRepository;
 import jakarta.enterprise.context.ApplicationScoped;

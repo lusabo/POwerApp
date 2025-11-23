@@ -1,6 +1,6 @@
 package com.powerapp.dto;
 
-import com.powerapp.model.ProjectConfig;
+import com.powerapp.entity.ProjectConfig;
 
 public class ProjectConfigResponse {
     public String projectName;

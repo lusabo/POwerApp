@@ -1,8 +1,8 @@
 package com.powerapp.service;
 
 import com.powerapp.dto.CapacityResponse;
-import com.powerapp.model.Holiday;
-import com.powerapp.model.Sprint;
+import com.powerapp.entity.Holiday;
+import com.powerapp.entity.Sprint;
 import com.powerapp.repository.HolidayRepository;
 import com.powerapp.repository.TeamMemberRepository;
 import jakarta.enterprise.context.ApplicationScoped;

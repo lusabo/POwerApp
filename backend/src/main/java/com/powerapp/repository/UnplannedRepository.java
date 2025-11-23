@@ -1,8 +1,8 @@
 package com.powerapp.repository;
 
-import com.powerapp.model.Sprint;
-import com.powerapp.model.UnplannedItem;
-import com.powerapp.model.User;
+import com.powerapp.entity.Sprint;
+import com.powerapp.entity.UnplannedItem;
+import com.powerapp.entity.User;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;

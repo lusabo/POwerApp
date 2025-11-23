@@ -1,6 +1,6 @@
 package com.powerapp.dto;
 
-import com.powerapp.model.Epic;
+import com.powerapp.entity.Epic;
 import java.math.BigDecimal;
 
 public class EpicResponse {

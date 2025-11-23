@@ -1,7 +1,7 @@
 package com.powerapp.repository;
 
-import com.powerapp.model.Sprint;
-import com.powerapp.model.SprintAbsence;
+import com.powerapp.entity.Sprint;
+import com.powerapp.entity.SprintAbsence;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;

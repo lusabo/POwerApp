@@ -1,7 +1,7 @@
 package com.powerapp.repository;
 
-import com.powerapp.model.TeamMember;
-import com.powerapp.model.User;
+import com.powerapp.entity.TeamMember;
+import com.powerapp.entity.User;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
