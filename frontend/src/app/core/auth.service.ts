@@ -1,8 +1,8 @@
-import { Injectable } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
-import { tap } from 'rxjs/operators';
+import { tap } from 'rxjs';
 
 interface AuthResponse {
   token: string;
@@ -10,9 +10,15 @@ interface AuthResponse {
   email: string;
 }
 
+const TOKEN_KEY = 'token';
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  constructor(private http: HttpClient, private router: Router) {}
+  private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+  private readonly tokenState = signal<string | null>(localStorage.getItem(TOKEN_KEY));
+
+  readonly authenticated = computed(() => !!this.tokenState());
 
   login(email: string, password: string) {
     return this.http
@@ -31,19 +37,21 @@ export class AuthService {
   }
 
   logout() {
-    localStorage.removeItem('token');
-    this.router.navigate(['/login']);
+    localStorage.removeItem(TOKEN_KEY);
+    this.tokenState.set(null);
+    void this.router.navigate(['/login']);
   }
 
-  get token() {
-    return localStorage.getItem('token');
+  token(): string | null {
+    return this.tokenState();
   }
 
-  isAuthenticated() {
-    return !!this.token;
+  isAuthenticated(): boolean {
+    return this.authenticated();
   }
 
   private saveSession(token: string) {
-    localStorage.setItem('token', token);
+    localStorage.setItem(TOKEN_KEY, token);
+    this.tokenState.set(token);
   }
 }

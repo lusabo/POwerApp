@@ -22,14 +22,15 @@ public class SprintCapacityService {
         this.teamMembers = teamMembers;
     }
 
-    public void recalc(Sprint sprint, User user) {
+    public CapacityResponse recalc(Sprint sprint, User user) {
         CapacityResponse base = capacityService.calculate(sprint);
         int ceremonyDays = configs.findByOwner(user)
                 .map(c -> c.getCeremoniesDays() != null ? c.getCeremoniesDays() : 0)
                 .orElse(0);
-        int workingDaysRaw = base.workingDays + base.holidayDays; // úteis sem feriado
+        int workingDays = base.workingDays; // dias úteis (segunda a sexta), incluindo feriados
         int holidayDays = base.holidayDays;
-        int netCapacity = workingDaysRaw - ceremonyDays - holidayDays;
+        // capacidade líquida: dias úteis - feriados - cerimônias
+        int netCapacity = workingDays - holidayDays - ceremonyDays;
         int teamSize = teamMembers.findByOwner(user).size();
         int absencesDays = sprint.getAbsences().stream()
                 .map(a -> a.getDays() != null ? a.getDays() : 0)
@@ -40,16 +41,15 @@ public class SprintCapacityService {
         int operations = sprint.getOperationsSpikesDays() != null ? sprint.getOperationsSpikesDays() : 0;
         int finalCapacity = totalCapacity - operations;
         double finalPercent = netCapacity > 0 && teamSize > 0 ? (double) finalCapacity / (netCapacity * teamSize) : 0d;
-
-        sprint.setWorkingDays(workingDaysRaw);
-        sprint.setHolidayDays(holidayDays);
-        sprint.setCeremonyDays(ceremonyDays);
-        sprint.setNetCapacityDays(netCapacity);
         sprint.setTeamSize(teamSize);
-        sprint.setAbsencesDays(absencesDays);
-        sprint.setCapacityTotal(totalCapacity);
-        sprint.setCapacityPercent(totalPercent);
-        sprint.setCapacityFinal(finalCapacity);
-        sprint.setCapacityFinalPercent(finalPercent);
+
+        CapacityResponse enriched = new CapacityResponse(sprint.getId(), totalCapacity, workingDays, base.holidayDays);
+        enriched.netCapacityDays = netCapacity;
+        enriched.absencesDays = absencesDays;
+        enriched.ceremonyDays = ceremonyDays;
+        enriched.capacityPercent = totalPercent;
+        enriched.capacityFinal = finalCapacity;
+        enriched.capacityFinalPercent = finalPercent;
+        return enriched;
     }
 }

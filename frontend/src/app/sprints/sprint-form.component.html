@@ -1,24 +1,50 @@
 <form [formGroup]="form" (ngSubmit)="submit()">
   <div class="form-row">
     <div class="field">
-      <label>Nome da sprint</label>
-      <input type="text" formControlName="name" />
+      <label for="sprint-name">{{ 'sprints.name' | translate }}</label>
+      <input id="sprint-name" type="text" formControlName="name" />
     </div>
     <div class="field">
-      <label>Dias de Operações/spikes</label>
-      <input type="number" min="0" step="0.5" formControlName="operationsSpikesDays" />
+      <label for="sprint-goal">{{ 'sprints.goal' | translate }}</label>
+      <input id="sprint-goal" type="text" formControlName="goal" />
+    </div>
+    <div class="field">
+      <label for="sprint-start">{{ 'sprints.start' | translate }}</label>
+      <input id="sprint-start" type="date" formControlName="startDate" />
+    </div>
+    <div class="field">
+      <label for="sprint-end">{{ 'sprints.end' | translate }}</label>
+      <input id="sprint-end" type="date" formControlName="endDate" />
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="field">
+      <label for="sprint-domain-cycle">{{ 'sprints.domainCycle' | translate }}</label>
+      <select id="sprint-domain-cycle" formControlName="domainCycleId">
+        <option [ngValue]="null">{{ 'epics.all' | translate }}</option>
+        @for (dc of domainCycles(); track dc.id) {
+          <option [ngValue]="dc.id">{{ dc.name }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="sprint-ops">{{ 'sprints.opsSpikes' | translate }}</label>
+      <input id="sprint-ops" type="number" min="0" step="0.5" formControlName="operationsSpikesDays" />
     </div>
   </div>
 
   <div class="absences" formArrayName="absences">
-    <h4>Ausências</h4>
-    <div class="abs-row" *ngFor="let absCtrl of absencesArray.controls; let i = index" [formGroupName]="i">
-      <label>{{ members[i]?.name }}</label>
-      <input type="number" min="0" step="0.5" formControlName="days" />
-    </div>
+    <h4>{{ 'sprints.absences' | translate }}</h4>
+    @for (absCtrl of absencesArray.controls; track absCtrl.value?.teamMemberId; let i = $index) {
+      <div class="abs-row" [formGroupName]="i">
+        <label>{{ members()[i]?.name }}</label>
+        <input type="number" min="0" step="0.5" formControlName="days" />
+      </div>
+    }
   </div>
 
-  <button type="submit" class="save-btn" [disabled]="loading">
-    {{ loading ? 'Salvando...' : 'Salvar' }}
+  <button type="submit" class="save-btn" [disabled]="loading()">
+    {{ loading() ? ('sprints.saving' | translate) : ('sprints.save' | translate) }}
   </button>
 </form>

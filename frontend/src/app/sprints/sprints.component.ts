@@ -1,54 +1,66 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { BehaviorSubject, Subject, takeUntil, finalize } from 'rxjs';
+import { finalize } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SprintsService } from './sprints.service';
 import { Sprint, SprintCreatePayload, TeamMember } from './sprints.model';
+import { SprintFormComponent } from './sprint-form.component';
+import { SprintTableComponent } from './sprint-table.component';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-sprints',
   templateUrl: './sprints.component.html',
-  styleUrls: ['./sprints.component.css']
+  styleUrls: ['./sprints.component.css'],
+  imports: [SprintFormComponent, SprintTableComponent, MatProgressSpinnerModule, TranslateModule],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class SprintsComponent implements OnInit, OnDestroy {
-  sprints$ = new BehaviorSubject<Sprint[]>([]);
-  members$ = new BehaviorSubject<TeamMember[]>([]);
-  loading$ = new BehaviorSubject<boolean>(false);
-  rowLoadingId: number | null = null;
-  private destroy$ = new Subject<void>();
+export class SprintsComponent implements OnInit {
+  private readonly service = inject(SprintsService);
+  private readonly snack = inject(MatSnackBar);
+  private readonly destroyRef = inject(DestroyRef);
 
-  constructor(private service: SprintsService, private snack: MatSnackBar) {}
+  readonly sprints = signal<Sprint[]>([]);
+  readonly members = signal<TeamMember[]>([]);
+  readonly domainCycles = signal<{ id: number; name: string }[]>([]);
+  readonly loading = signal(false);
+  readonly rowLoadingId = signal<number | null>(null);
 
   ngOnInit() {
     this.loadMembers();
+    this.loadDomainCycles();
     this.loadSprints();
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   private loadSprints() {
     this.service
       .list()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((data) => this.sprints$.next(data));
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data) => this.sprints.set(data));
   }
 
   private loadMembers() {
     this.service
       .team()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((data) => this.members$.next(data));
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data) => this.members.set(data));
+  }
+
+  private loadDomainCycles() {
+    this.service
+      .domainCycles()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data) => this.domainCycles.set(data));
   }
 
   onSave(payload: SprintCreatePayload) {
-    this.loading$.next(true);
+    this.loading.set(true);
     this.service
       .create(payload)
       .pipe(
-        finalize(() => this.loading$.next(false)),
-        takeUntil(this.destroy$)
+        finalize(() => this.loading.set(false)),
+        takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
         next: () => {
@@ -61,16 +73,16 @@ export class SprintsComponent implements OnInit, OnDestroy {
   }
 
   onReload(id: number) {
-    this.rowLoadingId = id;
-    this.loading$.next(true);
+    this.rowLoadingId.set(id);
+    this.loading.set(true);
     this.service
       .reload(id)
       .pipe(
         finalize(() => {
-          this.loading$.next(false);
-          this.rowLoadingId = null;
+          this.loading.set(false);
+          this.rowLoadingId.set(null);
         }),
-        takeUntil(this.destroy$)
+        takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
         next: () => this.loadSprints(),

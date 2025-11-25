@@ -30,9 +30,8 @@ public class Sprint {
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
-    @Column(name = "capacity")
-    private Integer capacity;
-
+    @Column(name = "goal")
+    private String goal;
     @Column(name = "sp_completed")
     private Integer storyPointsCompleted;
 
@@ -42,35 +41,11 @@ public class Sprint {
     @Column(name = "operations_spikes_days")
     private Integer operationsSpikesDays;
 
-    @Column(name = "working_days")
-    private Integer workingDays;
-
-    @Column(name = "ceremony_days")
-    private Integer ceremonyDays;
-
-    @Column(name = "holiday_days")
-    private Integer holidayDays;
-
-    @Column(name = "net_capacity_days")
-    private Integer netCapacityDays;
-
     @Column(name = "team_size")
     private Integer teamSize;
 
-    @Column(name = "absences_days")
-    private Integer absencesDays;
-
-    @Column(name = "capacity_total")
-    private Integer capacityTotal;
-
-    @Column(name = "capacity_percent")
-    private Double capacityPercent;
-
-    @Column(name = "capacity_final")
-    private Integer capacityFinal;
-
-    @Column(name = "capacity_final_percent")
-    private Double capacityFinalPercent;
+    @Column(name = "sprint_state")
+    private String sprintState;
 
     @OneToMany(mappedBy = "sprint", fetch = FetchType.LAZY, cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
     private List<SprintAbsence> absences = new ArrayList<>();
@@ -115,12 +90,12 @@ public class Sprint {
         this.endDate = endDate;
     }
 
-    public Integer getCapacity() {
-        return capacity;
+    public String getGoal() {
+        return goal;
     }
 
-    public void setCapacity(Integer capacity) {
-        this.capacity = capacity;
+    public void setGoal(String goal) {
+        this.goal = goal;
     }
 
     public Integer getStoryPointsCompleted() {
@@ -147,38 +122,6 @@ public class Sprint {
         this.operationsSpikesDays = operationsSpikesDays;
     }
 
-    public Integer getWorkingDays() {
-        return workingDays;
-    }
-
-    public void setWorkingDays(Integer workingDays) {
-        this.workingDays = workingDays;
-    }
-
-    public Integer getCeremonyDays() {
-        return ceremonyDays;
-    }
-
-    public void setCeremonyDays(Integer ceremonyDays) {
-        this.ceremonyDays = ceremonyDays;
-    }
-
-    public Integer getHolidayDays() {
-        return holidayDays;
-    }
-
-    public void setHolidayDays(Integer holidayDays) {
-        this.holidayDays = holidayDays;
-    }
-
-    public Integer getNetCapacityDays() {
-        return netCapacityDays;
-    }
-
-    public void setNetCapacityDays(Integer netCapacityDays) {
-        this.netCapacityDays = netCapacityDays;
-    }
-
     public Integer getTeamSize() {
         return teamSize;
     }
@@ -187,44 +130,13 @@ public class Sprint {
         this.teamSize = teamSize;
     }
 
-    public Integer getAbsencesDays() {
-        return absencesDays;
+
+    public String getSprintState() {
+        return sprintState;
     }
 
-    public void setAbsencesDays(Integer absencesDays) {
-        this.absencesDays = absencesDays;
-    }
-
-    public Integer getCapacityTotal() {
-        return capacityTotal;
-    }
-
-    public void setCapacityTotal(Integer capacityTotal) {
-        this.capacityTotal = capacityTotal;
-    }
-
-    public Double getCapacityPercent() {
-        return capacityPercent;
-    }
-
-    public void setCapacityPercent(Double capacityPercent) {
-        this.capacityPercent = capacityPercent;
-    }
-
-    public Integer getCapacityFinal() {
-        return capacityFinal;
-    }
-
-    public void setCapacityFinal(Integer capacityFinal) {
-        this.capacityFinal = capacityFinal;
-    }
-
-    public Double getCapacityFinalPercent() {
-        return capacityFinalPercent;
-    }
-
-    public void setCapacityFinalPercent(Double capacityFinalPercent) {
-        this.capacityFinalPercent = capacityFinalPercent;
+    public void setSprintState(String sprintState) {
+        this.sprintState = sprintState;
     }
 
     public List<SprintAbsence> getAbsences() {

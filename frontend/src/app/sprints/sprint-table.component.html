@@ -1,42 +1,54 @@
 <table class="sprint-table">
   <thead>
     <tr>
-      <th>ID</th>
-      <th>ID JIRA</th>
-      <th>NOME</th>
-      <th>PERÍODO</th>
-      <th>SP Entregues</th>
-      <th>Dias Úteis</th>
-      <th>Cerimônias</th>
-      <th>Feriados</th>
-      <th>Capacidade Líquida da Sprint</th>
-      <th>Ausências</th>
-      <th>Capacidade Total da Equipe</th>
-      <th>Percentual de Capacidade</th>
-      <th>Ops/Spikes</th>
-      <th>Capacidade Final da Equipe</th>
-      <th>Percentual Final de Capacidade</th>
+      <th class="highlight">{{ 'sprints.table.state' | translate }}</th>
+      <th class="highlight">{{ 'sprints.table.spDone' | translate }}</th>
+      <th>{{ 'sprints.domainCycle' | translate }}</th>
+      <th class="sortable" (click)="toggleNameSort()" tabindex="0">
+        {{ 'sprints.table.name' | translate }}
+      </th>
+      <th>{{ 'sprints.table.period' | translate }}</th>
+      <th>{{ 'sprints.table.workingDays' | translate }}</th>
+      <th>{{ 'sprints.table.ceremonyDays' | translate }}</th>
+      <th>{{ 'sprints.table.holidayDays' | translate }}</th>
+      <th>{{ 'sprints.table.netCapacity' | translate }}</th>
+      <th>{{ 'sprints.table.absences' | translate }}</th>
+      <th>{{ 'sprints.table.teamCapacity' | translate }}</th>
+      <th>{{ 'sprints.table.capacityPct' | translate }}</th>
+      <th>{{ 'sprints.table.opsSpikes' | translate }}</th>
+      <th>{{ 'sprints.table.finalCapacity' | translate }}</th>
+      <th>{{ 'sprints.table.finalCapacityPct' | translate }}</th>
       <th></th>
     </tr>
   </thead>
   <tbody>
-    <tr *ngFor="let s of sprints">
-      <td>{{ s.id }}</td>
-      <td>{{ s.jiraSprintId || '-' }}</td>
-      <td>{{ s.name }}</td>
-      <td>{{ s.startDate | date: 'dd/MM/yyyy' }} - {{ s.endDate | date: 'dd/MM/yyyy' }}</td>
-      <td>{{ s.storyPointsCompleted }}</td>
-      <td>{{ s.workingDays }}</td>
-      <td>{{ s.ceremonyDays }}</td>
-      <td>{{ s.holidayDays }}</td>
-      <td>{{ s.netCapacityDays }}</td>
-      <td>{{ s.absencesDays }}</td>
-      <td>{{ s.capacityTotal }}</td>
-      <td>{{ s.capacityPercent | percent: '1.0-1' }}</td>
-      <td>{{ s.operationsSpikesDays }}</td>
-      <td>{{ s.capacityFinal }}</td>
-      <td>{{ s.capacityFinalPercent | percent: '1.0-1' }}</td>
-      <td><button (click)="reload.emit(s.id)" [disabled]="loading || rowLoadingId === s.id">Reload</button></td>
-    </tr>
+    @for (s of sortedSprints(); track s.id) {
+      <tr>
+        <td>{{ s.sprintState || '-' }}</td>
+        <td>{{ s.storyPointsCompleted ?? '-' }}</td>
+        <td>{{ s.domainCycleName || '-' }}</td>
+        <td>{{ s.name }}</td>
+        <td>{{ s.startDate | date: 'dd/MM/yyyy' }} - {{ s.endDate | date: 'dd/MM/yyyy' }}</td>
+        <td>{{ s.workingDays }}</td>
+        <td>{{ s.ceremonyDays }}</td>
+        <td>{{ s.holidayDays }}</td>
+        <td>{{ s.netCapacityDays }}</td>
+        <td>{{ s.absencesDays }}</td>
+        <td>{{ s.capacityTotal }}</td>
+        <td>{{ s.capacityPercent | percent: '1.0-1' }}</td>
+        <td>{{ s.operationsSpikesDays }}</td>
+        <td>{{ s.capacityFinal }}</td>
+        <td>{{ s.capacityFinalPercent | percent: '1.0-1' }}</td>
+        <td>
+          <button type="button" (click)="reload.emit(s.id)" [disabled]="loading() || rowLoadingId() === s.id">
+            {{ 'sprints.table.reload' | translate }}
+          </button>
+        </td>
+      </tr>
+    } @empty {
+      <tr>
+        <td colspan="14">Nenhuma sprint cadastrada.</td>
+      </tr>
+    }
   </tbody>
 </table>

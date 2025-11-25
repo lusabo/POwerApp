@@ -1,17 +1,50 @@
-<div class="page-shell">
-  <div class="card" style="max-width: 480px; margin: 80px auto;">
-    <h2>Entrar</h2>
-    <form [formGroup]="form" (ngSubmit)="submit()">
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>Email</mat-label>
-        <input matInput formControlName="email" type="email" />
+<div class="page-shell auth-shell">
+  <div class="card auth-card">
+    <div class="auth-header">
+      <h1>{{ 'login.title' | translate }}</h1>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="auth-form">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>{{ 'login.email' | translate }}</mat-label>
+        <input matInput formControlName="email" type="email" autocomplete="email" />
+        @if (form.get('email')?.hasError('required') && form.get('email')?.touched) {
+          <mat-error>{{ 'login.email' | translate }} é obrigatório</mat-error>
+        }
+        @if (form.get('email')?.hasError('email') && form.get('email')?.touched) {
+          <mat-error>Email inválido</mat-error>
+        }
       </mat-form-field>
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>Senha</mat-label>
-        <input matInput formControlName="password" type="password" />
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>{{ 'login.password' | translate }}</mat-label>
+        <input matInput formControlName="password" [type]="showPassword() ? 'text' : 'password'" autocomplete="current-password" />
+        <button mat-icon-button matSuffix type="button" (click)="togglePasswordVisibility()" aria-label="Mostrar ou ocultar senha">
+          <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        @if (form.get('password')?.hasError('required') && form.get('password')?.touched) {
+          <mat-error>{{ 'login.password' | translate }} é obrigatória</mat-error>
+        }
       </mat-form-field>
-      <button mat-raised-button color="primary" type="submit" [disabled]="loading">Login</button>
-      <a routerLink="/register" style="margin-left: 12px;">Criar conta</a>
+
+      <button
+        mat-raised-button
+        color="primary"
+        type="submit"
+        [disabled]="loading()"
+        [attr.aria-busy]="loading()"
+        class="submit-btn"
+      >
+        @if (!loading()) {
+          <mat-icon>login</mat-icon>
+        }
+        <span>{{ 'login.submit' | translate }}</span>
+      </button>
+
+      <div class="auth-link">
+        <span>Não tem uma conta?</span>
+        <a routerLink="/register">{{ 'login.registerLink' | translate }}</a>
+      </div>
     </form>
   </div>
 </div>

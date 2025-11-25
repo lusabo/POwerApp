@@ -1,4 +1,58 @@
-<div class="card">
-  <h2>Dashboard</h2>
-  <p>Use o menu para navegar entre sprints, épicos, feriados e time.</p>
+<h1 class="page-title">{{ 'dashboard.title' | translate }}</h1>
+
+<div class="dashboard-grid" *ngIf="!loading && !error && displayedSprints.length">
+  <div class="card sprint-card" *ngFor="let sprint of displayedSprints">
+    <div class="sprint-card-header">
+      <h3 class="sprint-card-title">{{ sprint.name }}</h3>
+    </div>
+
+    <div class="sprint-card-body">
+      <div class="sprint-state" [ngClass]="stateClass(sprint)">
+        {{ stateLabelKey(sprint) | translate }}
+      </div>
+
+      <div class="card-row">
+        <span class="label">{{ 'dashboard.labels.start' | translate }}</span>
+        <span class="value">{{ formatDate(sprint.startDate) }}</span>
+      </div>
+
+      <div class="card-row">
+        <span class="label">{{ 'dashboard.labels.end' | translate }}</span>
+        <span class="value">{{ formatDate(sprint.endDate) }}</span>
+      </div>
+
+      <div class="card-row">
+        <span class="label">{{ 'dashboard.labels.goal' | translate }}</span>
+        <span class="value objective">
+          {{ sprint.goal || '-' }}
+        </span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="card-row highlight">
+        <span class="label">{{ 'dashboard.labels.forecast' | translate }}</span>
+        <span class="value forecast">{{ formattedForecastFor(sprint) }}</span>
+      </div>
+
+      <div class="card-row">
+        <span class="label">{{ 'dashboard.labels.totalSp' | translate }}</span>
+        <span class="value">
+          {{ sprint.storyPointsCompleted ?? '-' }}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card" *ngIf="loading">
+  <p class="info">{{ 'dashboard.loadingSprints' | translate }}</p>
+</div>
+
+<div class="card" *ngIf="!loading && !error && !displayedSprints.length">
+  <p class="info">{{ 'dashboard.noSprints' | translate }}</p>
+</div>
+
+<div class="card" *ngIf="error">
+  <p class="error">{{ 'dashboard.error' | translate }}</p>
 </div>

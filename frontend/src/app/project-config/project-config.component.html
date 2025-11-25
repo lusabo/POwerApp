@@ -1,42 +1,78 @@
-<div class="card">
-  <h2>Configuração do Projeto</h2>
-  <p>Guarde o nome do projeto e detalhes do Jira usados pelas demais seções.</p>
+<div class="project-card">
+  <div class="header">
+    <h2>Configuração do Projeto</h2>
+    <p>Guarde o nome do projeto e detalhes do Jira usados pelas demais seções.</p>
+  </div>
 
-  <form [formGroup]="form" (ngSubmit)="save()" class="row">
-    <mat-form-field appearance="outline">
-      <mat-label>Nome do projeto</mat-label>
-      <input matInput formControlName="projectName" />
-    </mat-form-field>
-
-    <mat-form-field appearance="outline">
-      <mat-label>Chave do Jira</mat-label>
-      <input matInput formControlName="jiraKey" />
-    </mat-form-field>
-
-    <mat-form-field appearance="outline">
-      <mat-label>Board</mat-label>
-      <input matInput formControlName="board" />
-    </mat-form-field>
-
-    <mat-form-field appearance="outline">
-      <mat-label>Dias reservados para cerimônias</mat-label>
-      <input matInput type="number" formControlName="ceremoniesDays" />
-    </mat-form-field>
-
-    <mat-form-field appearance="outline">
-      <mat-label>Board ID</mat-label>
-      <input matInput formControlName="boardId" disabled />
-    </mat-form-field>
-
-    <mat-form-field appearance="outline">
-      <mat-label>Time de feature</mat-label>
-      <input matInput formControlName="featureTeam" />
-    </mat-form-field>
-
-    <div class="actions">
-      <button mat-raised-button color="primary" type="submit" [disabled]="saving">
-        {{ saving ? "Salvando..." : "Salvar configuração" }}
-      </button>
+  @if (!editing()) {
+    <div class="detail-row">
+      <span class="label">Sigla do projeto no Jira:</span>
+      <span class="value">{{ form.getRawValue().projectName || '-' }}</span>
     </div>
-  </form>
+    <div class="detail-row">
+      <span class="label">Jira Personal Access Tokens:</span>
+      <span class="value token">
+        {{ maskedToken() }}
+        <button type="button" mat-icon-button (click)="toggleToken()">
+          <mat-icon>{{ showToken() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+      </span>
+    </div>
+    <div class="detail-row">
+      <span class="label">Nome do Board:</span>
+      <span class="value">{{ form.getRawValue().board || '-' }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="label">Nome do Feature Team:</span>
+      <span class="value">{{ form.getRawValue().featureTeam || '-' }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="label">Dias Reservados para Cerimônia:</span>
+      <span class="value">{{ form.getRawValue().ceremoniesDays || '-' }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="label">ID do projeto no Jira:</span>
+      <span class="value">{{ form.getRawValue().boardId || '-' }}</span>
+    </div>
+    <button mat-stroked-button color="primary" class="edit-btn" type="button" (click)="toggleEdit()">
+      <mat-icon aria-hidden="true">edit</mat-icon>
+      Editar
+    </button>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Sigla do projeto no Jira</mat-label>
+        <input matInput formControlName="projectName" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="token-field">
+        <mat-label>Jira Personal Access Tokens</mat-label>
+        <input matInput [type]="showToken() ? 'text' : 'password'" formControlName="jiraKey" />
+        <button mat-icon-button matSuffix type="button" (click)="toggleToken()" aria-label="Alternar exibição do token">
+          <mat-icon>{{ showToken() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Nome do Board</mat-label>
+        <input matInput formControlName="board" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Nome do Feature Team</mat-label>
+        <input matInput formControlName="featureTeam" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Dias Reservados para cerimônia</mat-label>
+        <input matInput type="number" formControlName="ceremoniesDays" />
+      </mat-form-field>
+
+      <div class="actions">
+        <button mat-raised-button color="primary" type="submit" [disabled]="saving()">
+          {{ saving() ? "Salvando..." : "Salvar Configuração" }}
+        </button>
+      </div>
+    </form>
+  }
 </div>

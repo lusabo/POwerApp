@@ -6,14 +6,25 @@ public class SprintJiraResponse {
     public String startDate;
     public String endDate;
     public String completeDate;
+    public String state;
+    public String goal;
     public Double storyPointsDelivered;
 
-    public SprintJiraResponse(Long sprintId, String sprintName, String startDate, String endDate, String completeDate, Double storyPointsDelivered) {
+    public SprintJiraResponse(Long sprintId,
+                              String sprintName,
+                              String startDate,
+                              String endDate,
+                              String completeDate,
+                              String state,
+                              String goal,
+                              Double storyPointsDelivered) {
         this.sprintId = sprintId;
         this.sprintName = sprintName;
         this.startDate = startDate;
         this.endDate = endDate;
         this.completeDate = completeDate;
+        this.state = state;
+        this.goal = goal;
         this.storyPointsDelivered = storyPointsDelivered;
     }
 }

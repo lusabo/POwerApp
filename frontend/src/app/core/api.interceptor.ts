@@ -1,27 +1,40 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import {
   HttpEvent,
   HttpHandler,
   HttpInterceptor,
   HttpRequest
 } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, catchError, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
 
 @Injectable()
 export class ApiInterceptor implements HttpInterceptor {
-  constructor(private auth: AuthService) {}
+  private readonly auth = inject(AuthService);
 
-  intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    const token = this.auth.token;
+  private getLanguage(): string {
+    const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('powerapp-lang') : null;
+    return stored || 'pt';
+  }
+
+  intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
+    const token = this.auth.token();
+    const headers: Record<string, string> = { 'Accept-Language': this.getLanguage() };
+
     if (token) {
-      const clone = req.clone({
-        setHeaders: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      return next.handle(clone);
+      headers['Authorization'] = `Bearer ${token}`;
     }
-    return next.handle(req);
+
+    const clone = req.clone({ setHeaders: headers });
+    return next.handle(clone).pipe(
+      catchError((error) => {
+        const isAuthRoute = req.url.includes('/auth/');
+        const isAsset = req.url.includes('/assets/');
+        if (error.status === 401 && !isAuthRoute && !isAsset) {
+          this.auth.logout();
+        }
+        return throwError(() => error);
+      })
+    );
   }
 }

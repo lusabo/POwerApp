@@ -3,23 +3,27 @@ package com.powerapp.util;
 import com.powerapp.dto.SprintAbsenceRequest;
 import com.powerapp.dto.SprintRequest;
 import com.powerapp.dto.SprintResponse;
+import com.powerapp.entity.DomainCycle;
 import com.powerapp.entity.Sprint;
 import com.powerapp.entity.SprintAbsence;
 import com.powerapp.entity.TeamMember;
 import com.powerapp.entity.User;
-import com.powerapp.dto.SprintJiraResponse;
-import java.time.OffsetDateTime;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class SprintMapper {
-    public Sprint toNewEntity(SprintRequest request, User owner, Sprint existing, List<TeamMember> members) {
+    public Sprint toNewEntity(SprintRequest request, User owner, Sprint existing, List<TeamMember> members, DomainCycle domainCycle) {
         Sprint sprint = existing != null ? existing : new Sprint();
         sprint.setOwner(owner);
         sprint.setName(request.name);
+        sprint.setGoal(request.goal);
         sprint.setOperationsSpikesDays(request.operationsSpikesDays != null ? request.operationsSpikesDays : 0);
+        sprint.setStartDate(parseLocalDate(request.startDate));
+        sprint.setEndDate(parseLocalDate(request.endDate));
+        sprint.setDomainCycle(domainCycle);
         sprint.getAbsences().clear();
         for (SprintAbsenceRequest req : safeAbsences(request.absences)) {
             if (req == null || req.teamMemberId == null || req.days == null) {
@@ -40,28 +44,8 @@ public class SprintMapper {
         }
         return sprint;
     }
-
-    public Sprint toResponseEntityWithJira(SprintRequest request,
-                                           User owner,
-                                           SprintJiraResponse summary,
-                                           List<TeamMember> members) {
-        Sprint sprint = toNewEntity(request, owner, new Sprint(), members);
-        sprint.setJiraSprintId(summary.sprintId);
-        sprint.setStartDate(parseDate(summary.startDate));
-        sprint.setEndDate(parseDate(summary.endDate));
-        sprint.setStoryPointsCompleted((int) Math.round(summary.storyPointsDelivered));
-        return sprint;
-    }
-
-    public void updateFromJira(Sprint sprint, SprintJiraResponse summary) {
-        sprint.setJiraSprintId(summary.sprintId);
-        sprint.setStartDate(parseDate(summary.startDate));
-        sprint.setEndDate(parseDate(summary.endDate));
-        sprint.setStoryPointsCompleted((int) Math.round(summary.storyPointsDelivered));
-    }
-
-    private java.time.LocalDate parseDate(String value) {
-        return value != null ? OffsetDateTime.parse(value).toLocalDate() : null;
+    private LocalDate parseLocalDate(String value) {
+        return value != null && !value.isBlank() ? LocalDate.parse(value) : null;
     }
 
     private List<SprintAbsenceRequest> safeAbsences(List<SprintAbsenceRequest> absences) {
@@ -72,21 +56,18 @@ public class SprintMapper {
         SprintResponse resp = new SprintResponse();
         resp.id = sprint.getId();
         resp.name = sprint.getName();
+        resp.goal = sprint.getGoal();
         resp.jiraSprintId = sprint.getJiraSprintId();
         resp.startDate = sprint.getStartDate() != null ? sprint.getStartDate().toString() : null;
         resp.endDate = sprint.getEndDate() != null ? sprint.getEndDate().toString() : null;
         resp.storyPointsCompleted = sprint.getStoryPointsCompleted();
         resp.operationsSpikesDays = sprint.getOperationsSpikesDays();
-        resp.workingDays = sprint.getWorkingDays();
-        resp.ceremonyDays = sprint.getCeremonyDays();
-        resp.holidayDays = sprint.getHolidayDays();
-        resp.netCapacityDays = sprint.getNetCapacityDays();
         resp.teamSize = sprint.getTeamSize();
-        resp.absencesDays = sprint.getAbsencesDays();
-        resp.capacityTotal = sprint.getCapacityTotal();
-        resp.capacityPercent = sprint.getCapacityPercent();
-        resp.capacityFinal = sprint.getCapacityFinal();
-        resp.capacityFinalPercent = sprint.getCapacityFinalPercent();
+        resp.sprintState = sprint.getSprintState();
+        if (sprint.getDomainCycle() != null) {
+            resp.domainCycleId = sprint.getDomainCycle().getId();
+            resp.domainCycleName = sprint.getDomainCycle().getName();
+        }
         return resp;
     }
 }

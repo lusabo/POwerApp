@@ -1,14 +1,24 @@
 <mat-toolbar color="primary">
   <span>{{ title }}</span>
   <span class="spacer"></span>
-  <a mat-button routerLink="/">Dashboard</a>
-  <a mat-button routerLink="/project-config">Projeto</a>
-  <a mat-button routerLink="/holidays">Feriados</a>
-  <a mat-button routerLink="/sprints">Sprints</a>
-  <a mat-button routerLink="/epics">Épicos</a>
-  <a mat-button routerLink="/domain-cycles">Domain Cycles</a>
-  <a mat-button routerLink="/team">Time</a>
-  <button mat-button *ngIf="auth.isAuthenticated()" (click)="logout()">Sair</button>
+  <a mat-button routerLink="/">{{ 'nav.dashboard' | translate }}</a>
+  <a mat-button routerLink="/project-config">{{ 'nav.projectConfig' | translate }}</a>
+  <a mat-button routerLink="/holidays">{{ 'nav.holidays' | translate }}</a>
+  <a mat-button routerLink="/sprints">{{ 'nav.sprints' | translate }}</a>
+  <a mat-button routerLink="/epics">{{ 'nav.epics' | translate }}</a>
+  <a mat-button routerLink="/domain-cycles">{{ 'nav.domainCycles' | translate }}</a>
+  <a mat-button routerLink="/team">{{ 'nav.team' | translate }}</a>
+  <mat-form-field appearance="outline" class="lang-picker">
+    <mat-label>{{ 'nav.language' | translate }}</mat-label>
+    <mat-select [value]="currentLanguage()" (selectionChange)="setLanguage($event.value)">
+      @for (lang of languageOptions; track lang.value) {
+        <mat-option [value]="lang.value">{{ lang.label | translate }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+  @if (isAuthenticated()) {
+    <button mat-button type="button" (click)="logout()">{{ 'nav.logout' | translate }}</button>
+  }
 </mat-toolbar>
 
 <div class="page-shell">

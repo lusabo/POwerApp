@@ -23,8 +23,20 @@ public class ListSprintsUseCase {
 
     public List<SprintResponse> execute(User owner) {
         return sprints.findByOwner(owner).stream()
-                .peek(s -> capacityService.recalc(s, owner))
-                .map(mapper::toResponse)
+                .map(s -> {
+                    var capacity = capacityService.recalc(s, owner);
+                    SprintResponse resp = mapper.toResponse(s);
+                    resp.workingDays = capacity.workingDays;
+                    resp.ceremonyDays = capacity.ceremonyDays;
+                    resp.holidayDays = capacity.holidayDays;
+                    resp.netCapacityDays = capacity.netCapacityDays;
+                    resp.absencesDays = capacity.absencesDays;
+                    resp.capacityTotal = capacity.capacity;
+                    resp.capacityPercent = capacity.capacityPercent;
+                    resp.capacityFinal = capacity.capacityFinal;
+                    resp.capacityFinalPercent = capacity.capacityFinalPercent;
+                    return resp;
+                })
                 .collect(Collectors.toList());
     }
 }

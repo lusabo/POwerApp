@@ -15,3 +15,8 @@ a {
 a + a {
   margin-left: 12px;
 }
+
+.lang-picker {
+  width: 140px;
+  margin-right: 12px;
+}

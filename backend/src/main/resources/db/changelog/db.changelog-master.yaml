@@ -106,6 +106,17 @@ databaseChangeLog:
                     references: users(id)
 
   - changeSet:
+      id: 4.1
+      author: codex
+      changes:
+        - addColumn:
+            tableName: sprints
+            columns:
+              - column:
+                  name: sprint_state
+                  type: VARCHAR(50)
+
+  - changeSet:
       id: 5
       author: codex
       changes:
@@ -268,6 +279,32 @@ databaseChangeLog:
               - column: {name: capacity_final_percent, type: "DECIMAL(10,4)"}
 
   - changeSet:
+      id: 15.1
+      author: codex
+      changes:
+        - dropColumn:
+            tableName: sprints
+            columns:
+              - column: {name: holiday_days}
+              - column: {name: net_capacity_days}
+              - column: {name: absences_days}
+              - column: {name: capacity_total}
+              - column: {name: capacity_percent}
+              - column: {name: capacity_final}
+              - column: {name: capacity_final_percent}
+
+  - changeSet:
+      id: 15.2
+      author: codex
+      changes:
+        - dropColumn:
+            tableName: sprints
+            columns:
+              - column: {name: capacity}
+              - column: {name: working_days}
+              - column: {name: ceremony_days}
+
+  - changeSet:
       id: 16
       author: codex
       changes:
@@ -290,3 +327,14 @@ databaseChangeLog:
             referencedTableName: team_members
             referencedColumnNames: id
             constraintName: fk_absence_member
+
+  - changeSet:
+      id: 17
+      author: codex
+      changes:
+        - addColumn:
+            tableName: sprints
+            columns:
+              - column:
+                  name: goal
+                  type: VARCHAR(255)

@@ -6,6 +6,7 @@ public class SprintResponse {
     public Long jiraSprintId;
     public String startDate;
     public String endDate;
+    public String goal;
     public Integer storyPointsCompleted;
     public Integer operationsSpikesDays;
     public Integer workingDays;
@@ -18,4 +19,7 @@ public class SprintResponse {
     public Double capacityPercent;
     public Integer capacityFinal;
     public Double capacityFinalPercent;
+    public Long domainCycleId;
+    public String domainCycleName;
+    public String sprintState;
 }

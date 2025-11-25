@@ -9,8 +9,10 @@ import com.powerapp.repository.UserRepository;
 import com.powerapp.config.CurrentUser;
 import com.powerapp.config.JwtService;
 import io.quarkus.security.UnauthorizedException;
+import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -40,12 +42,10 @@ public class AuthController {
 
     @POST
     @Path("/register")
+    @PermitAll
     @Transactional
-    public Response register(RegisterRequest request) {
+    public Response register(@Valid RegisterRequest request) {
         log.info("Iniciando método register(request)");
-        if (request == null || request.email == null || request.password == null || request.name == null) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("Missing fields").build();
-        }
         if (users.findByEmail(request.email).isPresent()) {
             return Response.status(Response.Status.CONFLICT).entity("Email already registered").build();
         }
@@ -63,8 +63,9 @@ public class AuthController {
 
     @POST
     @Path("/login")
+    @PermitAll
     @Transactional
-    public Response login(AuthRequest request) {
+    public Response login(@Valid AuthRequest request) {
         log.info("Iniciando método login(request.email)");
         User user = users.findByEmail(request.email.toLowerCase())
                 .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
@@ -92,7 +93,7 @@ public class AuthController {
     @Path("/settings")
     @RolesAllowed("user")
     @Transactional
-    public Response updateSettings(UserSettingsRequest request) {
+    public Response updateSettings(@Valid UserSettingsRequest request) {
         log.info("Iniciando método updateSettings(request)");
         User user = currentUser.get();
         user.setJiraApiEmail(request.jiraApiEmail);

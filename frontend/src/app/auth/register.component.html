@@ -1,21 +1,65 @@
-<div class="page-shell">
-  <div class="card" style="max-width: 480px; margin: 80px auto;">
-    <h2>Criar conta</h2>
-    <form [formGroup]="form" (ngSubmit)="submit()">
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>Nome</mat-label>
-        <input matInput formControlName="name" />
+<div class="page-shell auth-shell">
+  <div class="card auth-card">
+    <div class="auth-header">
+      <h1>{{ 'register.title' | translate }}</h1>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="auth-form">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>{{ 'register.name' | translate }}</mat-label>
+        <input matInput formControlName="name" type="text" autocomplete="name" />
+        @if (form.get('name')?.hasError('required') && form.get('name')?.touched) {
+          <mat-error>{{ 'register.name' | translate }} é obrigatório</mat-error>
+        }
       </mat-form-field>
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>Email</mat-label>
-        <input matInput formControlName="email" type="email" />
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>{{ 'register.email' | translate }}</mat-label>
+        <input matInput formControlName="email" type="email" autocomplete="email" />
+        @if (form.get('email')?.hasError('required') && form.get('email')?.touched) {
+          <mat-error>{{ 'register.email' | translate }} é obrigatório</mat-error>
+        }
+        @if (form.get('email')?.hasError('email') && form.get('email')?.touched) {
+          <mat-error>Email inválido</mat-error>
+        }
       </mat-form-field>
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>Senha</mat-label>
-        <input matInput formControlName="password" type="password" />
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>{{ 'register.password' | translate }}</mat-label>
+        <input matInput formControlName="password" [type]="showPassword() ? 'text' : 'password'" autocomplete="new-password" />
+        <button mat-icon-button matSuffix (click)="togglePasswordVisibility()" type="button" aria-label="Mostrar ou ocultar senha">
+          <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        @if (form.get('password')?.hasError('required') && form.get('password')?.touched) {
+          <mat-error>{{ 'register.password' | translate }} é obrigatória</mat-error>
+        }
+        @if (form.get('password')?.hasError('minlength') && form.get('password')?.touched) {
+          <mat-error>{{ 'register.password' | translate }} deve ter no mínimo 6 caracteres</mat-error>
+        }
       </mat-form-field>
-      <button mat-raised-button color="primary" type="submit">Registrar</button>
-      <a routerLink="/login" style="margin-left: 12px;">Já tenho conta</a>
+
+      <div class="password-hint">
+        <small>{{ 'register.password' | translate }} deve ter no mínimo 6 caracteres</small>
+      </div>
+
+      <button
+        mat-raised-button
+        color="primary"
+        type="submit"
+        [disabled]="loading()"
+        [attr.aria-busy]="loading()"
+        class="submit-btn"
+      >
+        @if (!loading()) {
+          <mat-icon>person_add</mat-icon>
+        }
+        <span>{{ 'register.submit' | translate }}</span>
+      </button>
+
+      <div class="auth-link">
+        <span>{{ 'register.loginLink' | translate }}</span>
+        <a routerLink="/login">{{ 'login.title' | translate }}</a>
+      </div>
     </form>
   </div>
 </div>

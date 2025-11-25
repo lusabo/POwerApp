@@ -7,6 +7,7 @@ import com.powerapp.service.jira.model.JiraFieldResolver;
 import com.powerapp.entity.ProjectConfig;
 import com.powerapp.entity.User;
 import com.powerapp.repository.ProjectConfigRepository;
+import com.powerapp.util.MessageService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -39,61 +40,71 @@ public class JiraService {
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final String agileBaseUrl;
+    private final MessageService messages;
 
     public JiraService(
             @ConfigProperty(name = "jira.api.base-url") String baseUrl,
             ProjectConfigRepository configs,
             JiraFieldResolver fieldResolver,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            MessageService messages) {
         this.baseUrl = baseUrl;
         this.agileBaseUrl = deriveAgileBaseUrl(baseUrl);
         this.configs = configs;
         this.fieldResolver = fieldResolver;
         this.objectMapper = objectMapper;
+        this.messages = messages;
     }
 
     public SprintJiraResponse fetchSprintSummary(String sprintName, User user) {
         log.info("Iniciando método fetchSprintSummary(sprintName={}, userId={})", sprintName, user != null ? user.getId() : null);
+        String normalizedName = sprintName != null ? sprintName.trim() : null;
         if (baseUrl == null || baseUrl.isBlank()) {
-            throw new WebApplicationException("Configure a base URL do Jira e o token do projeto para habilitar a busca no Jira", Response.Status.BAD_REQUEST);
+            throw new WebApplicationException(messages.get("error.jira.configure.base"), Response.Status.BAD_REQUEST);
         }
         ProjectConfig config = configs.findByOwner(user)
-                .orElseThrow(() -> new WebApplicationException("Configure o projeto antes de buscar sprints", Response.Status.BAD_REQUEST));
+                .orElseThrow(() -> new WebApplicationException(messages.get("error.jira.configure.project"), Response.Status.BAD_REQUEST));
         if (config.getBoard() == null || config.getBoard().isBlank()) {
-            throw new WebApplicationException("Configure o board do Jira antes de buscar sprints", Response.Status.BAD_REQUEST);
+            throw new WebApplicationException(messages.get("error.jira.configure.board"), Response.Status.BAD_REQUEST);
         }
         JiraCredentials credentials = resolveCredentials(config);
         Long boardId = config.getBoardId();
         if (boardId == null || boardId == 0) {
             boardId = getBoardIdExact(config.getBoard(), credentials);
         }
-        Long sprintId = getSprintIdExact(boardId, sprintName, credentials);
-        SprintDates dates = getSprintDates(sprintId, credentials);
-        double storyPoints = getCompletedStoryPoints(config.getBoard(), sprintName, credentials);
+        SprintMeta sprintMeta = getSprintExact(boardId, normalizedName, credentials);
+        if (sprintMeta == null || sprintMeta.id() == null) {
+            log.warn("Sprint não encontrada no board após paginação completa para o nome {}", normalizedName);
+            throw new WebApplicationException(messages.get("error.sprint.notFound"), Response.Status.NOT_FOUND);
+        }
+        SprintDates dates = getSprintDates(sprintMeta.id(), credentials);
+        double storyPoints = getCompletedStoryPoints(config.getBoard(), normalizedName, credentials);
         SprintJiraResponse response = new SprintJiraResponse(
-                sprintId,
-                sprintName,
+                sprintMeta.id(),
+                normalizedName,
                 dates.startDate(),
                 dates.endDate(),
                 dates.completeDate(),
+                sprintMeta.state(),
+                dates.goal(),
                 storyPoints
         );
-        log.info("Finalizando método fetchSprintSummary com retorno: sprintId={} storyPoints={}", sprintId, storyPoints);
+        log.info("Finalizando método fetchSprintSummary com retorno: sprintId={} storyPoints={}", sprintMeta.id(), storyPoints);
         return response;
     }
 
     public EpicProgressResponse fetchEpicProgress(String epicKey, User user) {
         log.info("Iniciando método fetchEpicProgress(epicKey={}, userId={})", epicKey, user != null ? user.getId() : null);
         if (baseUrl == null || baseUrl.isBlank()) {
-            throw new WebApplicationException("Configure a base URL do Jira e o token do projeto para habilitar a busca no Jira", Response.Status.BAD_REQUEST);
+            throw new WebApplicationException(messages.get("error.jira.configure.base"), Response.Status.BAD_REQUEST);
         }
         ProjectConfig config = configs.findByOwner(user)
-                .orElseThrow(() -> new WebApplicationException("Configure o projeto antes de buscar épicos", Response.Status.BAD_REQUEST));
+                .orElseThrow(() -> new WebApplicationException(messages.get("error.jira.configure.project.epic"), Response.Status.BAD_REQUEST));
         JiraCredentials credentials = resolveCredentials(config);
 
         String featureTeam = Optional.ofNullable(config.getFeatureTeam())
                 .filter(v -> !v.isBlank())
-                .orElseThrow(() -> new WebApplicationException("Configure a Feature Team antes de buscar épicos", Response.Status.BAD_REQUEST));
+                .orElseThrow(() -> new WebApplicationException(messages.get("error.jira.configure.featureTeam"), Response.Status.BAD_REQUEST));
 
         String storyPointsFieldName = resolveStoryPointsField();
 
@@ -126,15 +137,15 @@ public class JiraService {
     public EpicStats fetchEpicStats(String epicKey, User user) {
         log.info("Iniciando método fetchEpicStats(epicKey={}, userId={})", epicKey, user != null ? user.getId() : null);
         if (baseUrl == null || baseUrl.isBlank()) {
-            throw new WebApplicationException("Configure a base URL do Jira e o token do projeto para habilitar a busca no Jira", Response.Status.BAD_REQUEST);
+            throw new WebApplicationException(messages.get("error.jira.configure.base"), Response.Status.BAD_REQUEST);
         }
         ProjectConfig config = configs.findByOwner(user)
-                .orElseThrow(() -> new WebApplicationException("Configure o projeto antes de buscar épicos", Response.Status.BAD_REQUEST));
+                .orElseThrow(() -> new WebApplicationException(messages.get("error.jira.configure.project.epic"), Response.Status.BAD_REQUEST));
         JiraCredentials credentials = resolveCredentials(config);
 
         String featureTeam = Optional.ofNullable(config.getFeatureTeam())
                 .filter(v -> !v.isBlank())
-                .orElseThrow(() -> new WebApplicationException("Configure a Feature Team antes de buscar épicos", Response.Status.BAD_REQUEST));
+                .orElseThrow(() -> new WebApplicationException(messages.get("error.jira.configure.featureTeam"), Response.Status.BAD_REQUEST));
 
         String storyPointsFieldName = resolveStoryPointsField();
         
@@ -189,33 +200,35 @@ public class JiraService {
             if (boardName.equals(name)) {
                 if (foundId != null) {
                     log.error("Erro em getBoardIdExact: múltiplos boards com nome {}", boardName);
-                    throw new WebApplicationException("Múltiplos boards encontrados com o mesmo nome", Response.Status.BAD_REQUEST);
+                    throw new WebApplicationException(messages.get("error.jira.multipleBoards"), Response.Status.BAD_REQUEST);
                 }
                 foundId = board.path("id").isIntegralNumber() ? board.path("id").asLong() : null;
             }
         }
         if (foundId == null) {
-            throw new WebApplicationException("Board não encontrado", Response.Status.NOT_FOUND);
+            throw new WebApplicationException(messages.get("error.jira.boardNotFound"), Response.Status.NOT_FOUND);
         }
         log.info("Finalizando método getBoardIdExact com boardId={}", foundId);
         return foundId;
     }
 
-    public Long getSprintIdExact(Long boardId, String sprintName, JiraCredentials credentials) {
-        log.info("Iniciando método getSprintIdExact(boardId={}, sprintName={})", boardId, sprintName);
+    public SprintMeta getSprintExact(Long boardId, String sprintName, JiraCredentials credentials) {
+        log.info("Iniciando método getSprintExact(boardId={}, sprintName={})", boardId, sprintName);
         long startAt = 0;
         while (true) {
             Map<String, String> query = new HashMap<>();
-            query.put("state", "closed");
+            // Buscar sprints em qualquer estado relevante
+            query.put("state", "active, future, closed");
             query.put("startAt", String.valueOf(startAt));
             JsonNode body = getAgile("/board/" + boardId + "/sprint", query, credentials);
             JsonNode values = body.path("values");
             for (JsonNode sprint : values) {
                 String name = sprint.path("name").asText();
-                if (sprintName.equals(name)) {
+                if (sprintName != null && sprintName.trim().equals(name.trim())) {
                     Long sprintId = sprint.path("id").isIntegralNumber() ? sprint.path("id").asLong() : null;
-                    log.info("Finalizando método getSprintIdExact com sprintId={}", sprintId);
-                    return sprintId;
+                    String state = sprint.path("state").asText(null);
+                    log.info("Finalizando método getSprintExact com sprintId={} state={}", sprintId, state);
+                    return new SprintMeta(sprintId, state);
                 }
             }
             boolean isLast = body.path("isLast").asBoolean(true);
@@ -234,8 +247,9 @@ public class JiraService {
         String start = body.path("startDate").asText(null);
         String end = body.path("endDate").asText(null);
         String complete = body.path("completeDate").asText(null);
-        log.info("Finalizando método getSprintDates com start={} end={} complete={}", start, end, complete);
-        return new SprintDates(start, end, complete);
+        String goal = body.path("goal").asText(null);
+        log.info("Finalizando método getSprintDates com start={} end={} complete={} goal={}", start, end, complete, goal);
+        return new SprintDates(start, end, complete, goal);
     }
 
     public double getCompletedStoryPoints(String boardName, String sprintName, JiraCredentials credentials) {
@@ -293,18 +307,18 @@ public class JiraService {
             if (statusCode == 400) {
                 String details = summarizeErrorMessages(body);
                 String message = details != null
-                        ? "Erro ao buscar dados no Jira: " + details
-                        : "Erro ao buscar dados no Jira (400). Verifique campos customizados configurados.";
+                        ? messages.get("error.jira.apiError", details)
+                        : messages.get("error.jira.apiError", "400. Verifique campos customizados configurados.");
                 log.error("Erro em JiraService.get: {} (uri={})", message, uri);
                 throw new WebApplicationException(message, Response.Status.BAD_REQUEST);
             }
             if (statusCode == 404) {
                 log.warn("Recurso não encontrado no Jira (uri={})", uri);
-                throw new WebApplicationException("Epic ou issues não encontrados no Jira", Response.Status.NOT_FOUND);
+                throw new WebApplicationException(messages.get("error.jira.epicNotFound"), Response.Status.NOT_FOUND);
             }
             if (statusCode >= 400) {
                 log.error("Erro em JiraService.get: status {} body={}", statusCode, response.body());
-                throw new WebApplicationException("Erro ao buscar dados no Jira (" + statusCode + ")", Response.Status.BAD_GATEWAY);
+                throw new WebApplicationException(messages.get("error.jira.apiError", statusCode), Response.Status.BAD_GATEWAY);
             }
             JsonNode parsed = body != null ? body : objectMapper.readTree(response.body());
             log.info("Finalizando método get(uri={}) com status {}", uri, statusCode);
@@ -312,10 +326,10 @@ public class JiraService {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("Erro em JiraService.get: interrupção ao chamar {}", uri, e);
-            throw new WebApplicationException("Falha ao comunicar com o Jira", Response.Status.BAD_GATEWAY);
+            throw new WebApplicationException(messages.get("error.jira.communication"), Response.Status.BAD_GATEWAY);
         } catch (IOException e) {
             log.error("Erro em JiraService.get: I/O ao chamar {}", uri, e);
-            throw new WebApplicationException("Falha ao comunicar com o Jira", Response.Status.BAD_GATEWAY);
+            throw new WebApplicationException(messages.get("error.jira.communication"), Response.Status.BAD_GATEWAY);
         }
     }
 
@@ -334,7 +348,7 @@ public class JiraService {
             JsonNode body = safeParse(response.body());
             if (statusCode >= 400) {
                 log.error("Erro em JiraService.getAgile: status {} body={}", statusCode, response.body());
-                throw new WebApplicationException("Erro ao buscar dados no Jira Agile (" + statusCode + ")", Response.Status.BAD_GATEWAY);
+                throw new WebApplicationException(messages.get("error.jira.agileApiError", statusCode), Response.Status.BAD_GATEWAY);
             }
             JsonNode parsed = body != null ? body : objectMapper.readTree(response.body());
             log.info("Finalizando método getAgile(uri={}) com status {}", uri, statusCode);
@@ -342,10 +356,10 @@ public class JiraService {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("Erro em JiraService.getAgile: interrupção ao chamar {}", uri, e);
-            throw new WebApplicationException("Falha ao comunicar com o Jira Agile", Response.Status.BAD_GATEWAY);
+            throw new WebApplicationException(messages.get("error.jira.agileCommunication"), Response.Status.BAD_GATEWAY);
         } catch (IOException e) {
             log.error("Erro em JiraService.getAgile: I/O ao chamar {}", uri, e);
-            throw new WebApplicationException("Falha ao comunicar com o Jira Agile", Response.Status.BAD_GATEWAY);
+            throw new WebApplicationException(messages.get("error.jira.agileCommunication"), Response.Status.BAD_GATEWAY);
         }
     }
 
@@ -361,7 +375,7 @@ public class JiraService {
             int status = response.statusCode();
             if (status >= 400) {
                 log.error("Erro em httpGet: status {} body={}", status, response.body());
-                throw new WebApplicationException("Erro ao consultar Jira (" + status + ")", Response.Status.BAD_GATEWAY);
+                throw new WebApplicationException(messages.get("error.jira.queryError", status), Response.Status.BAD_GATEWAY);
             }
             return objectMapper.readTree(response.body());
         } catch (IOException | InterruptedException e) {
@@ -369,7 +383,7 @@ public class JiraService {
                 Thread.currentThread().interrupt();
             }
             log.error("Erro em httpGet para url {}", url, e);
-            throw new WebApplicationException("Falha ao consultar Jira", Response.Status.BAD_GATEWAY);
+            throw new WebApplicationException(messages.get("error.jira.queryCommunication"), Response.Status.BAD_GATEWAY);
         }
     }
 
@@ -380,7 +394,7 @@ public class JiraService {
                 .orElse(null);
 
         if (token == null) {
-            throw new WebApplicationException("Configure o token do Jira no cadastro do projeto", Response.Status.BAD_REQUEST);
+            throw new WebApplicationException(messages.get("error.jira.tokenMissing"), Response.Status.BAD_REQUEST);
         }
         String header = "Bearer " + token;
         log.debug("Finalizando método resolveCredentials");
@@ -448,16 +462,19 @@ public class JiraService {
     private record JiraCredentials(String authorizationHeader) {
     }
 
-    private record SprintDates(String startDate, String endDate, String completeDate) {
+    private record SprintDates(String startDate, String endDate, String completeDate, String goal) {
     }
 
     public record EpicStats(String epicName, String effortSize, int issuesCount, double storyPointsSum) {
     }
 
+    public record SprintMeta(Long id, String state) {
+    }
+
     private String resolveStoryPointsField() {
         String id = fieldResolver.getId(JiraField.STORY_POINTS);
         if (id == null || id.isBlank()) {
-            throw new WebApplicationException("Configure jira.api.story-points-field", Response.Status.BAD_REQUEST);
+            throw new WebApplicationException(messages.get("error.jira.storyPointsField"), Response.Status.BAD_REQUEST);
         }
         return id;
     }
@@ -468,7 +485,7 @@ public class JiraService {
         }
         JiraCredentials credentials = resolveCredentials(
                 configs.findByOwner(user)
-                        .orElseThrow(() -> new WebApplicationException("Configure o projeto antes de buscar sprints", Response.Status.BAD_REQUEST))
+                        .orElseThrow(() -> new WebApplicationException(messages.get("error.jira.configure.project"), Response.Status.BAD_REQUEST))
         );
         JsonNode node = getAgile("/sprint/" + sprintId, Map.of(), credentials);
         String state = node.path("state").asText("");
@@ -478,7 +495,7 @@ public class JiraService {
     private String resolveEffortSizeField() {
         String id = fieldResolver.getId(JiraField.EFFORT);
         if (id == null || id.isBlank()) {
-            throw new WebApplicationException("Configure jira.api.effort-field", Response.Status.BAD_REQUEST);
+            throw new WebApplicationException(messages.get("error.jira.effortField"), Response.Status.BAD_REQUEST);
         }
         return id;
     }

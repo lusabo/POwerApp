@@ -9,6 +9,7 @@ import com.powerapp.repository.DomainCycleRepository;
 import com.powerapp.repository.EpicRepository;
 import com.powerapp.config.CurrentUser;
 import com.powerapp.service.jira.JiraService;
+import com.powerapp.util.MessageService;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.WebApplicationException;
@@ -35,12 +36,14 @@ public class EpicController {
     private final JiraService jiraService;
     private final EpicRepository epics;
     private final DomainCycleRepository domainCycles;
+    private final MessageService messages;
 
-    public EpicController(CurrentUser currentUser, JiraService jiraService, EpicRepository epics, DomainCycleRepository domainCycles) {
+    public EpicController(CurrentUser currentUser, JiraService jiraService, EpicRepository epics, DomainCycleRepository domainCycles, MessageService messages) {
         this.currentUser = currentUser;
         this.jiraService = jiraService;
         this.epics = epics;
         this.domainCycles = domainCycles;
+        this.messages = messages;
     }
 
     @GET
@@ -65,14 +68,14 @@ public class EpicController {
     @Transactional
     public Response save(EpicRequest request) {
         if (request == null || request.epicKey == null || request.epicKey.isBlank()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("Epic key é obrigatória").build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(messages.get("error.epic.keyRequired")).build();
         }
         User user = currentUser.get();
         DomainCycle dc = null;
         if (request.domainCycleId != null) {
             dc = domainCycles.findById(request.domainCycleId);
             if (dc == null || !dc.getOwner().getId().equals(user.getId())) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("Domain cycle inválido").build();
+                return Response.status(Response.Status.BAD_REQUEST).entity(messages.get("error.epic.domainCycleInvalid")).build();
             }
         }
         JiraService.EpicStats stats = jiraService.fetchEpicStats(request.epicKey, user);

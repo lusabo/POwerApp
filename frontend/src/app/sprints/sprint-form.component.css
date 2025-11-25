@@ -1,28 +1,63 @@
 .form-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
-  flex-wrap: wrap;
+  margin-bottom: 16px;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  min-width: 240px;
+}
+
+.field input,
+.field select {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+.field label {
+  font-size: 14px;
+  color: #475569;
+  margin-bottom: 4px;
 }
 
 .absences {
-  margin-top: 16px;
+  display: flex;
+  gap: 16px;
+  margin-top: 24px;
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
 
 .abs-row {
-  display: grid;
-  grid-template-columns: 1fr 140px;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+}
+
+.abs-row input {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+  text-align: center;
 }
 
 .save-btn {
-  margin-top: 16px;
-  padding: 8px 16px;
+  margin-top: 24px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #e5e7eb;
+  color: #111827;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.save-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }

@@ -41,7 +41,8 @@ public class ForecastService {
                 .average()
                 .orElse(0d);
         double capacityAverage = owned.stream()
-                .map(Sprint::getCapacity)
+                .map(capacityService::calculate)
+                .map(c -> c.capacity)
                 .filter(v -> v != null && v > 0)
                 .mapToDouble(Integer::doubleValue)
                 .average()

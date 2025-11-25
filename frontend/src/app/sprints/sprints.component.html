@@ -1,18 +1,23 @@
-<div class="card">
+<section class="card" aria-labelledby="sprints-title">
+  <h2 id="sprints-title" class="sr-only">{{ 'sprints.title' | translate }}</h2>
+
   <app-sprint-form
-    [members]="(members$ | async) || []"
-    [loading]="(loading$ | async) || false"
+    [members]="members()"
+    [loading]="loading()"
+    [domainCycles]="domainCycles()"
     (saveSprint)="onSave($event)"
   ></app-sprint-form>
 
-  <div class="overlay" *ngIf="loading$ | async">
-    <mat-spinner diameter="40"></mat-spinner>
-  </div>
+  @if (loading()) {
+    <div class="overlay" role="status" aria-live="polite">
+      <mat-spinner diameter="40"></mat-spinner>
+    </div>
+  }
 
   <app-sprint-table
-    [sprints]="(sprints$ | async) || []"
-    [loading]="(loading$ | async) || false"
-    [rowLoadingId]="rowLoadingId"
+    [sprints]="sprints()"
+    [loading]="loading()"
+    [rowLoadingId]="rowLoadingId()"
     (reload)="onReload($event)"
   ></app-sprint-table>
-</div>
+</section>

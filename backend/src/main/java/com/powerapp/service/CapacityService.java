@@ -41,10 +41,11 @@ public class CapacityService {
         while (!date.isAfter(sprint.getEndDate())) {
             boolean weekend = date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY;
             if (!weekend) {
+                // Dias úteis: todos os dias de semana (segunda a sexta),
+                // independentemente de serem feriados.
+                workingDays++;
                 if (holidayDates.contains(date)) {
                     holidayDays++;
-                } else {
-                    workingDays++;
                 }
             }
             date = date.plusDays(1);
